@@ -1,0 +1,9 @@
+{
+  "JJAS_Seasonal_Rainfall": {
+    "MAE_mm": 2896.91,
+    "RMSE_mm": 4002.06,
+    "R2": 0.7743
+  },
+  "Onset_Date_MAE_days": 3.6,
+  "Withdrawal_Date_MAE_days": 4.2
+}

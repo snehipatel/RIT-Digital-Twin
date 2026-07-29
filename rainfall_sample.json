@@ -1,0 +1,334 @@
+{
+  "date": "2024-07-15",
+  "model": "XGBoost Final",
+  "grid_predictions": [
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    },
+    {
+      "lat": 8.5,
+      "lon": 73.5,
+      "rainfall": 0.0,
+      "rain_prob": 0.0
+    }
+  ],
+  "model_metrics": {
+    "classifier": {
+      "accuracy": 0.8626,
+      "f1_score": 0.8414,
+      "threshold": 0.374,
+      "approach": "Hybrid monsoon + full classifier",
+      "data": "1951-2025 (75 years, merged CSV)"
+    },
+    "regressor": {
+      "MAE": 65.283,
+      "RMSE": 121.924,
+      "R2": 0.3165,
+      "data": "1951-2025 (75 years, with temperature features)"
+    },
+    "combined_pipeline": {
+      "MAE": 28.811,
+      "RMSE": 79.359,
+      "R2": 0.4508
+    },
+    "model_type": "XGBoost 2-Stage Final",
+    "key_features": [
+      "Separate monsoon/non-monsoon classifiers",
+      "Optimal threshold tuning",
+      "14d/21d/30d lag features",
+      "Temperature + rainfall features combined",
+      "Climatological rain probability per location"
+    ]
+  }
+}

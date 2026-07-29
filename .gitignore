@@ -1,0 +1,82 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
+
+# Models
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.pt
+*.pth
+*.ckpt
+
+# Large datasets
+*.csv
+*.parquet
+*.feather
+
+# Generated outputs
+plots/
+plots_insat/
+plots_rainfall/
+plots_bhadali/
+
+# Cache
+.cache/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
+
+# Satellite images
+insat_lst/
+
+# IMD datasets
+data/
+datasets/
+
+# Model files
+models/
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.pt
+*.pth
+
+# Generated outputs
+plots/
+plots_insat/
+plots_rainfall/
+plots_bhadali/
+
+# Large files
+*.tif
+*.tiff
+*.grd
+*.parquet
+*.csv
+
+# IDE
+.vscode/
+.idea/

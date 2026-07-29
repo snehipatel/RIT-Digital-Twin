@@ -1,0 +1,18 @@
+{
+  "max_temp": {
+    "MAE": 0.494,
+    "RMSE": 0.666,
+    "R2": 0.9865
+  },
+  "min_temp": {
+    "MAE": 0.487,
+    "RMSE": 0.658,
+    "R2": 0.9892
+  },
+  "model_type": "LightGBM",
+  "spatial_resolution": "1.0\u00b0 x 1.0\u00b0",
+  "temporal_resolution": "Daily",
+  "forecast_horizon": "1\u20137 Days",
+  "train_years": "1951-2018",
+  "test_years": "2022-2025"
+}

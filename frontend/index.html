@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ISRO ClimaTwin India | Multi-Page Climate Intelligence Dashboard</title>
+  <meta name="description"
+    content="AI-Powered Digital Twin of India's Climate — real-time monitoring, short-term prediction, what-if scenario analysis, alerts and reports using ISRO & IMD national datasets." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+
+  <!-- Leaflet Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- ══════════ TOP NAV ══════════ -->
+  <nav class="topnav" id="topnav">
+    <div class="nav-left">
+      <div class="nav-logo">
+        <div class="logo-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <circle cx="14" cy="14" r="12" stroke="url(#logoGrad)" stroke-width="2" />
+            <path d="M7 14 Q14 7 21 14 Q14 21 7 14Z" fill="url(#logoGrad)" opacity="0.8" />
+            <circle cx="14" cy="14" r="3" fill="#00d4ff" />
+            <defs>
+              <linearGradient id="logoGrad" x1="0" y1="0" x2="28" y2="28">
+                <stop offset="0%" stop-color="#00d4ff" />
+                <stop offset="100%" stop-color="#7c3aed" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div>
+          <span class="logo-title">ClimaTwin <span class="logo-badge">INDIA</span></span>
+          <span class="logo-sub">ISRO · IMD · AI-Powered Digital Twin</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAGE NAVIGATION LINKS ── -->
+    <div class="nav-center">
+      <nav class="nav-links" id="nav-links" role="navigation" aria-label="Main navigation">
+        <button class="nav-link active" data-page="dashboard" id="navlink-dashboard">
+          <i data-lucide="layout-dashboard" size="14"></i>
+          Dashboard
+        </button>
+        <button class="nav-link" data-page="forecast" id="navlink-forecast">
+          <i data-lucide="calendar-days" size="14"></i>
+          Forecast
+        </button>
+        <button class="nav-link" data-page="whatif" id="navlink-whatif">
+          <i data-lucide="flask-conical" size="14"></i>
+          What-If
+        </button>
+        <button class="nav-link" data-page="alerts" id="navlink-alerts">
+          <i data-lucide="triangle-alert" size="14"></i>
+          Alerts
+          <span class="nav-link-badge" id="nav-alerts-badge">5</span>
+        </button>
+        <button class="nav-link" data-page="reports" id="navlink-reports">
+          <i data-lucide="file-bar-chart" size="14"></i>
+          Reports
+        </button>
+        <button class="nav-link" data-page="about" id="navlink-about">
+          <i data-lucide="info" size="14"></i>
+          About
+        </button>
+      </nav>
+    </div>
+
+    <div class="nav-right">
+      <div class="live-indicator">
+        <span class="live-dot"></span>
+        <span>LIVE · <span id="last-updated">just now</span></span>
+      </div>
+      <div class="nav-date" id="nav-date">—</div>
+      <button class="nav-btn" id="btn-refresh" title="Refresh Data">
+        <i data-lucide="refresh-cw" size="16"></i>
+      </button>
+      <button class="nav-btn" id="btn-alert-toggle" title="Alerts">
+        <i data-lucide="bell" size="16"></i>
+        <span class="badge" id="alert-count">5</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ══════════ MAIN LAYOUT ══════════ -->
+  <div class="app-layout">
+
+    <!-- ─── LEFT COLUMN (MAP — Permanent across all pages) ─── -->
+    <div class="map-col">
+      <div class="map-panel glass-card">
+        <div class="panel-header">
+          <span class="panel-title"><i data-lucide="map" size="16"></i> India Climate Map</span>
+          <div class="panel-controls">
+            <span class="model-tag" id="map-mode-tag">Dashboard Mode</span>
+            <span class="resolution-tag">0.25° × 0.25° Grid</span>
+          </div>
+        </div>
+
+        <div class="map-container-rel">
+          <div id="india-map"></div>
+
+          <!-- HUD: Controls -->
+          <div class="map-hud map-hud-controls">
+            <div class="hud-section">
+              <label class="hud-label">PILOT REGION</label>
+              <select class="select-input map-city-select" id="region-select">
+                <option value="all">All India</option>
+                <option value="ahmedabad">Ahmedabad, Gujarat</option>
+                <option value="delhi">New Delhi</option>
+                <option value="mumbai">Mumbai, Maharashtra</option>
+                <option value="chennai">Chennai, Tamil Nadu</option>
+                <option value="kolkata">Kolkata, West Bengal</option>
+                <option value="bengaluru">Bengaluru, Karnataka</option>
+                <option value="jaipur">Jaipur, Rajasthan</option>
+                <option value="bhubaneswar">Bhubaneswar, Odisha</option>
+              </select>
+            </div>
+
+            <div class="hud-section">
+              <label class="hud-label">FORECAST DATE</label>
+              <input type="date" class="select-input" id="forecast-date" />
+            </div>
+
+            <div class="hud-section">
+              <label class="hud-label">MAP LAYER</label>
+              <div class="layer-toggle-group" id="layer-toggle-group">
+                <button class="layer-btn active" data-layer="max_temp" id="layer-max_temp">
+                  <span class="layer-dot" style="background:#ff4d4d"></span>Max Temp
+                </button>
+                <button class="layer-btn" data-layer="min_temp" id="layer-min_temp">
+                  <span class="layer-dot" style="background:#4dc3ff"></span>Min Temp
+                </button>
+                <button class="layer-btn" data-layer="rainfall" id="layer-rainfall">
+                  <span class="layer-dot" style="background:#00e5cc"></span>Rainfall
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- HUD: Legend -->
+          <div class="map-hud map-hud-legend" id="map-legend">
+            <label class="hud-label">MAP LEGEND</label>
+            <div class="legend-bar" id="legend-bar">
+              <div class="legend-gradient" id="legend-gradient"></div>
+              <div class="legend-labels" id="legend-labels">
+                <span id="legend-min">28°C</span>
+                <span id="legend-mid">37°C</span>
+                <span id="legend-max">47°C</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- HUD: Engines & Sources -->
+          <div class="map-hud map-hud-engines">
+            <div class="hud-section" style="margin-bottom:8px">
+              <label class="hud-label">DATA SOURCES</label>
+              <div class="source-badges mini">
+                <span class="source-badge isro">ISRO · INSAT</span>
+                <span class="source-badge imd">IMD Grid</span>
+              </div>
+            </div>
+            <div class="hud-section">
+              <label class="hud-label">AI MODELS ACTIVE</label>
+              <div class="model-list mini">
+                <div class="model-item">
+                  <div class="model-status ok"></div>
+                  <span class="model-name">LightGBM</span>
+                </div>
+                <div class="model-item">
+                  <div class="model-status ok"></div>
+                  <span class="model-name">XGBoost 2S</span>
+                </div>
+                <div class="model-item">
+                  <div class="model-status ok"></div>
+                  <span class="model-name">LSTM Net</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="map-overlay-info" id="map-hover-info">
+          Hover over a grid point to see values
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── RIGHT COLUMN (6 PAGE SECTIONS) ─── -->
+    <div class="content-col" id="content-col">
+
+      <!-- ════════════════════════════════════════
+           PAGE: DASHBOARD (Home)
+      ════════════════════════════════════════ -->
+      <div class="page-section" id="page-dashboard">
+
+        <!-- Today header -->
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-title">Today's Climate</h1>
+            <p class="page-subtitle" id="dashboard-date-sub">Loading…</p>
+          </div>
+          <div class="page-header-actions">
+            <select class="select-input compact-select" id="dashboard-city-select">
+              <option value="all">All India</option>
+              <option value="ahmedabad">Ahmedabad</option>
+              <option value="delhi">New Delhi</option>
+              <option value="mumbai">Mumbai</option>
+              <option value="chennai">Chennai</option>
+              <option value="kolkata">Kolkata</option>
+              <option value="bengaluru">Bengaluru</option>
+              <option value="jaipur">Jaipur</option>
+              <option value="bhubaneswar">Bhubaneswar</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <section class="kpi-grid" id="kpi-row">
+          <div class="kpi-card" id="kpi-max-temp">
+            <div class="kpi-icon" style="background:linear-gradient(135deg,#ff4d4d22,#ff4d4d44)">
+              <i data-lucide="thermometer-sun" class="kpi-lucide" style="color:#ff6b6b"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">MAX TEMPERATURE</div>
+              <div class="kpi-value" id="kpi-max-val">—</div>
+              <div class="kpi-meta" id="kpi-max-meta">Predicting…</div>
+            </div>
+            <div class="kpi-trend" id="kpi-max-trend"></div>
+          </div>
+
+          <div class="kpi-card" id="kpi-min-temp">
+            <div class="kpi-icon" style="background:linear-gradient(135deg,#4dc3ff22,#4dc3ff44)">
+              <i data-lucide="thermometer-snowflake" class="kpi-lucide" style="color:#4dc3ff"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">MIN TEMPERATURE</div>
+              <div class="kpi-value" id="kpi-min-val">—</div>
+              <div class="kpi-meta" id="kpi-min-meta">Predicting…</div>
+            </div>
+            <div class="kpi-trend" id="kpi-min-trend"></div>
+          </div>
+
+          <div class="kpi-card" id="kpi-rainfall">
+            <div class="kpi-icon" style="background:linear-gradient(135deg,#00e5cc22,#00e5cc44)">
+              <i data-lucide="cloud-rain" class="kpi-lucide" style="color:#00e5cc"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">RAINFALL (24H)</div>
+              <div class="kpi-value" id="kpi-rain-val">—</div>
+              <div class="kpi-meta" id="kpi-rain-meta">Predicting…</div>
+            </div>
+            <div class="kpi-trend" id="kpi-rain-trend"></div>
+          </div>
+
+          <div class="kpi-card" id="kpi-humidity">
+            <div class="kpi-icon" style="background:linear-gradient(135deg,#a78bfa22,#a78bfa44)">
+              <i data-lucide="droplets" class="kpi-lucide" style="color:#a78bfa"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">HUMIDITY INDEX</div>
+              <div class="kpi-value" id="kpi-hum-val">—</div>
+              <div class="kpi-meta" id="kpi-hum-meta">Derived metric</div>
+            </div>
+            <div class="kpi-trend" id="kpi-hum-trend"></div>
+          </div>
+        </section>
+
+        <!-- Daily Comparison Strip -->
+        <div class="daily-comparison glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="trending-up" size="16"></i> Daily Comparison — vs Yesterday</span>
+            <span class="model-tag">Delta Analysis</span>
+          </div>
+          <div class="comparison-row" id="comparison-row">
+            <div class="comp-item">
+              <div class="comp-label">MAX TEMP</div>
+              <div class="comp-value" id="comp-max">—</div>
+              <div class="comp-delta up" id="comp-max-delta">↑ +1.2°C</div>
+            </div>
+            <div class="comp-divider"></div>
+            <div class="comp-item">
+              <div class="comp-label">MIN TEMP</div>
+              <div class="comp-value" id="comp-min">—</div>
+              <div class="comp-delta up" id="comp-min-delta">↑ +0.6°C</div>
+            </div>
+            <div class="comp-divider"></div>
+            <div class="comp-item">
+              <div class="comp-label">RAINFALL</div>
+              <div class="comp-value" id="comp-rain">—</div>
+              <div class="comp-delta down" id="comp-rain-delta">↓ −4.3 mm</div>
+            </div>
+            <div class="comp-divider"></div>
+            <div class="comp-item">
+              <div class="comp-label">HUMIDITY</div>
+              <div class="comp-value" id="comp-hum">—</div>
+              <div class="comp-delta down" id="comp-hum-delta">↓ −2%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Temperature Trend (7-Day) -->
+        <div class="chart-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="trending-up" size="16"></i> Max/Min Temperature Trend
+              (7-Day)</span>
+            <span class="model-tag">LightGBM Forecast</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="tempChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Rainfall Forecast (7-Day) -->
+        <div class="chart-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="bar-chart-2" size="16"></i> Rainfall Forecast (7-Day)</span>
+            <span class="model-tag">XGBoost 2-Stage</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="rainfallChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Historical Timeline -->
+        <section class="timeline-section glass-card" id="timeline-section">
+          <div class="timeline-header">
+            <span class="panel-title"><i data-lucide="clock" size="16"></i> Historical Timeline</span>
+            <span class="timeline-year" id="timeline-year">2024</span>
+          </div>
+          <div class="timeline-body">
+            <input type="range" class="timeline-slider" id="timeline-slider" min="2000" max="2025" step="1"
+              value="2024" />
+            <div class="timeline-labels">
+              <span>2000</span><span>2005</span><span>2010</span><span>2015</span><span>2020</span><span>2025</span>
+            </div>
+          </div>
+          <div class="timeline-stats" id="timeline-stats">
+            <!-- populated by JS -->
+          </div>
+        </section>
+
+        <!-- Data Sources -->
+        <div class="data-sources-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="database" size="16"></i> Data Sources</span>
+            <span class="resolution-tag">Integrated</span>
+          </div>
+          <div class="sources-grid">
+            <div class="source-item">
+              <div class="source-icon isro-bg">🛰️</div>
+              <div class="source-info">
+                <div class="source-name">ISRO · INSAT-3D/3DR</div>
+                <div class="source-desc">Geostationary satellite data, cloud imaging, OLR</div>
+              </div>
+              <div class="source-status ok-dot"></div>
+            </div>
+            <div class="source-item">
+              <div class="source-icon imd-bg">🌦️</div>
+              <div class="source-info">
+                <div class="source-name">IMD Grid Observations</div>
+                <div class="source-desc">0.25° gridded temperature & rainfall datasets</div>
+              </div>
+              <div class="source-status ok-dot"></div>
+            </div>
+            <div class="source-item">
+              <div class="source-icon mosdac-bg">📡</div>
+              <div class="source-info">
+                <div class="source-name">MOSDAC / SAC</div>
+                <div class="source-desc">Soil moisture, land surface temperature, NDVI</div>
+              </div>
+              <div class="source-status ok-dot"></div>
+            </div>
+            <div class="source-item">
+              <div class="source-icon bhuvan-bg">🗺️</div>
+              <div class="source-info">
+                <div class="source-name">Bhuvan Geoportal</div>
+                <div class="source-desc">DEM, land use / land cover, watershed data</div>
+              </div>
+              <div class="source-status ok-dot"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-dashboard -->
+
+
+      <!-- ════════════════════════════════════════
+           PAGE: FORECAST
+      ════════════════════════════════════════ -->
+      <div class="page-section hidden" id="page-forecast">
+
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-title">7-Day Forecast</h1>
+            <p class="page-subtitle">Select a date to view detailed climate statistics</p>
+          </div>
+          <div class="page-header-actions">
+            <select class="select-input compact-select" id="forecast-city-select">
+              <option value="all">All India</option>
+              <option value="ahmedabad">Ahmedabad</option>
+              <option value="delhi">New Delhi</option>
+              <option value="mumbai">Mumbai</option>
+              <option value="chennai">Chennai</option>
+              <option value="kolkata">Kolkata</option>
+              <option value="bengaluru">Bengaluru</option>
+              <option value="jaipur">Jaipur</option>
+              <option value="bhubaneswar">Bhubaneswar</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 7-Day Calendar Grid -->
+        <div class="forecast-calendar-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="calendar-days" size="16"></i> Weekly Forecast Calendar</span>
+            <span class="model-tag">LightGBM · XGBoost</span>
+          </div>
+          <div class="forecast-calendar" id="forecast-calendar">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+        <!-- Selected Day Stats -->
+        <div class="forecast-selected-header glass-card" id="forecast-selected-header">
+          <div class="selected-day-info">
+            <span class="selected-day-icon" id="fc-sel-icon">☀️</span>
+            <div>
+              <div class="selected-day-label" id="fc-sel-label">Select a day above</div>
+              <div class="selected-day-cond" id="fc-sel-cond">Click a date cell to view details</div>
+            </div>
+          </div>
+          <div class="forecast-city-desc" id="fc-city-desc"></div>
+        </div>
+
+        <!-- Forecast KPIs -->
+        <section class="kpi-grid" id="forecast-kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:linear-gradient(135deg,#ff4d4d22,#ff4d4d44)">
+              <i data-lucide="thermometer-sun" class="kpi-lucide" style="color:#ff6b6b"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">MAX TEMPERATURE</div>
+              <div class="kpi-value" id="fc-max-val">—</div>
+              <div class="kpi-meta">Forecast value</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:linear-gradient(135deg,#4dc3ff22,#4dc3ff44)">
+              <i data-lucide="thermometer-snowflake" class="kpi-lucide" style="color:#4dc3ff"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">MIN TEMPERATURE</div>
+              <div class="kpi-value" id="fc-min-val">—</div>
+              <div class="kpi-meta">Forecast value</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:linear-gradient(135deg,#00e5cc22,#00e5cc44)">
+              <i data-lucide="cloud-rain" class="kpi-lucide" style="color:#00e5cc"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">RAINFALL</div>
+              <div class="kpi-value" id="fc-rain-val">—</div>
+              <div class="kpi-meta">Forecast value</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:linear-gradient(135deg,#a78bfa22,#a78bfa44)">
+              <i data-lucide="droplets" class="kpi-lucide" style="color:#a78bfa"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">HUMIDITY</div>
+              <div class="kpi-value" id="fc-hum-val">—</div>
+              <div class="kpi-meta">Forecast value</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Forecast Temperature Chart -->
+        <div class="chart-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="trending-up" size="16"></i> Max/Min Temperature Trend
+              (7-Day)</span>
+            <span class="model-tag">LightGBM Forecast</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="forecastTempChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Forecast Rainfall Chart -->
+        <div class="chart-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="bar-chart-2" size="16"></i> Rainfall Forecast (7-Day)</span>
+            <span class="model-tag">XGBoost 2-Stage</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="forecastRainChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Climate Awareness Section -->
+        <div class="climate-awareness-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="leaf" size="16"></i> How You Can Help the Climate</span>
+            <span class="model-tag">Responsible Citizenship</span>
+          </div>
+          <p class="awareness-intro">Small actions by individuals add up to meaningful change. Here are simple steps
+            every responsible citizen can take to fight climate change and global warming.</p>
+          <div class="awareness-grid">
+            <div class="awareness-card-item">
+              <div class="awareness-icon">💡</div>
+              <div class="awareness-content">
+                <div class="awareness-title">Save Electricity</div>
+                <div class="awareness-desc">Turn off lights, fans, and appliances when not in use. Switch to LED bulbs
+                  and energy-efficient devices to reduce carbon emissions.</div>
+              </div>
+            </div>
+            <div class="awareness-card-item">
+              <div class="awareness-icon">🚌</div>
+              <div class="awareness-content">
+                <div class="awareness-title">Use Public Transport</div>
+                <div class="awareness-desc">Opt for buses, metros, or shared rides. Cycle or walk for short distances to
+                  cut down vehicular pollution and CO₂ emissions.</div>
+              </div>
+            </div>
+            <div class="awareness-card-item">
+              <div class="awareness-icon">🌳</div>
+              <div class="awareness-content">
+                <div class="awareness-title">Plant &amp; Protect Trees</div>
+                <div class="awareness-desc">Trees absorb CO₂ and produce oxygen. Plant saplings, protect existing trees,
+                  and support afforestation drives in your community.</div>
+              </div>
+            </div>
+            <div class="awareness-card-item">
+              <div class="awareness-icon">♻️</div>
+              <div class="awareness-content">
+                <div class="awareness-title">Reduce Plastic &amp; Recycle</div>
+                <div class="awareness-desc">Avoid single-use plastics, segregate waste, and recycle materials. Less
+                  waste in landfills means fewer greenhouse gas emissions.</div>
+              </div>
+            </div>
+            <div class="awareness-card-item">
+              <div class="awareness-icon">💧</div>
+              <div class="awareness-content">
+                <div class="awareness-title">Conserve Water</div>
+                <div class="awareness-desc">Fix leaky taps, take shorter showers, and reuse water where possible. Water
+                  conservation reduces the energy needed for water treatment.</div>
+              </div>
+            </div>
+            <div class="awareness-card-item">
+              <div class="awareness-icon">☀️</div>
+              <div class="awareness-content">
+                <div class="awareness-title">Support Renewable Energy</div>
+                <div class="awareness-desc">Choose solar panels or green energy plans when possible. Advocate for clean
+                  energy policies in your locality and workplace.</div>
+              </div>
+            </div>
+            <div class="awareness-card-item">
+              <div class="awareness-icon">🚫🔥</div>
+              <div class="awareness-content">
+                <div class="awareness-title">Avoid Burning Waste</div>
+                <div class="awareness-desc">Burning garbage, crop stubble, or leaves releases toxic gases. Use
+                  composting or proper disposal channels for waste management.</div>
+              </div>
+            </div>
+            <div class="awareness-card-item">
+              <div class="awareness-icon">📢</div>
+              <div class="awareness-content">
+                <div class="awareness-title">Spread Awareness</div>
+                <div class="awareness-desc">Share climate knowledge with family, friends, and on social media.
+                  Collective awareness is the first step toward collective action.</div>
+              </div>
+            </div>
+            <div class="awareness-card-item">
+              <div class="awareness-icon">🌱</div>
+              <div class="awareness-content">
+                <div class="awareness-title">Practice Sustainable Living</div>
+                <div class="awareness-desc">Choose local produce, reduce meat consumption, buy durable goods, and adopt
+                  a lifestyle that prioritises the planet's long-term health.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-forecast -->
+
+
+      <!-- ════════════════════════════════════════
+           PAGE: WHAT-IF SIMULATION
+      ════════════════════════════════════════ -->
+      <div class="page-section hidden" id="page-whatif">
+
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-title">What-If Scenario Simulator</h1>
+            <p class="page-subtitle">Adjust climate parameters and run simulations to explore projected impacts</p>
+          </div>
+          <div class="page-header-actions">
+            <select class="select-input compact-select" id="whatif-city-select">
+              <option value="all">All India</option>
+              <option value="ahmedabad">Ahmedabad</option>
+              <option value="delhi">New Delhi</option>
+              <option value="mumbai">Mumbai</option>
+              <option value="chennai">Chennai</option>
+              <option value="kolkata">Kolkata</option>
+              <option value="bengaluru">Bengaluru</option>
+              <option value="jaipur">Jaipur</option>
+              <option value="bhubaneswar">Bhubaneswar</option>
+            </select>
+            <input type="date" class="select-input compact-select" id="whatif-date-input" />
+          </div>
+        </div>
+
+        <section class="whatif-section glass-card" id="whatif-section">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="flask-conical" size="16"></i> Scenario Engine — Parameter
+              Controls</span>
+            <span class="model-tag">Scenario Engine</span>
+          </div>
+
+          <div class="whatif-body">
+            <div class="whatif-controls">
+              <div class="slider-group">
+                <label class="slider-label">
+                  Max Temperature
+                  <span class="slider-val" id="wi-maxtemp-val">37°C</span>
+                </label>
+                <input type="range" class="slider" id="wi-maxtemp-slider" min="10" max="50" step="0.5" value="37" />
+                <div class="slider-track-labels"><span>10°C</span><span>30°C</span><span>50°C</span></div>
+              </div>
+
+              <div class="slider-group">
+                <label class="slider-label">
+                  Min Temperature
+                  <span class="slider-val" id="wi-mintemp-val">25°C</span>
+                </label>
+                <input type="range" class="slider" id="wi-mintemp-slider" min="5" max="40" step="0.5" value="25" />
+                <div class="slider-track-labels"><span>5°C</span><span>22°C</span><span>40°C</span></div>
+              </div>
+
+              <div class="slider-group">
+                <label class="slider-label">
+                  Rainfall
+                  <span class="slider-val" id="wi-rain-val">18 mm</span>
+                </label>
+                <input type="range" class="slider" id="wi-rain-slider" min="0" max="300" step="5" value="18" />
+                <div class="slider-track-labels"><span>0 mm</span><span>150 mm</span><span>300 mm</span></div>
+              </div>
+
+              <div class="slider-group">
+                <label class="slider-label">
+                  Humidity
+                  <span class="slider-val" id="wi-hum-val">68%</span>
+                </label>
+                <input type="range" class="slider" id="wi-hum-slider" min="0" max="100" step="1" value="68" />
+                <div class="slider-track-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+              </div>
+
+              <div class="slider-group">
+                <label class="slider-label">
+                  CO₂ Concentration
+                  <span class="slider-val" id="co2-slider-val">420 ppm</span>
+                </label>
+                <input type="range" class="slider" id="co2-slider" min="280" max="1000" step="10" value="420" />
+                <div class="slider-track-labels"><span>280</span><span>640</span><span>1000 ppm</span></div>
+              </div>
+
+              <button class="run-simulation-btn" id="run-sim-btn">
+                <i data-lucide="play-circle" size="18"></i>
+                Run Simulation
+              </button>
+            </div>
+
+            <div class="whatif-results" id="whatif-results">
+              <div class="results-placeholder" id="results-placeholder">
+                <i data-lucide="flask-conical" size="40" style="opacity:0.3"></i>
+                <p>Adjust sliders and run simulation to see projected climate impacts</p>
+              </div>
+              <div class="results-grid" id="results-grid" style="display:none">
+                <!-- populated by JS -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Simulation Chart -->
+        <div class="chart-card glass-card" id="whatif-chart-card" style="display:none">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="activity" size="16"></i> Simulated Climate Impact</span>
+            <span class="model-tag">Scenario Output</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="whatifChart"></canvas>
+          </div>
+        </div>
+
+      </div><!-- /page-whatif -->
+
+
+      <!-- ════════════════════════════════════════
+           PAGE: ALERTS
+      ════════════════════════════════════════ -->
+      <div class="page-section hidden" id="page-alerts">
+
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-title">Weather Alerts & Warnings</h1>
+            <p class="page-subtitle">Active, upcoming, and recently expired weather advisories across India</p>
+          </div>
+          <div class="page-header-actions alerts-stats-row">
+            <div class="alert-stat-pill critical"><span id="stat-critical">2</span> Critical</div>
+            <div class="alert-stat-pill high"><span id="stat-high">2</span> High</div>
+            <div class="alert-stat-pill moderate"><span id="stat-moderate">2</span> Moderate</div>
+            <div class="alert-stat-pill low"><span id="stat-low">1</span> Low</div>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="alerts-filter-bar glass-card">
+          <div class="filter-group">
+            <span class="filter-label">STATUS:</span>
+            <button class="filter-btn active" data-filter-status="all" id="filt-status-all">All</button>
+            <button class="filter-btn" data-filter-status="active" id="filt-status-active">Active</button>
+            <button class="filter-btn" data-filter-status="upcoming" id="filt-status-upcoming">Upcoming</button>
+            <button class="filter-btn" data-filter-status="expired" id="filt-status-expired">Expired</button>
+          </div>
+          <div class="filter-divider"></div>
+          <div class="filter-group">
+            <span class="filter-label">SEVERITY:</span>
+            <button class="filter-btn active" data-filter-sev="all" id="filt-sev-all">All</button>
+            <button class="filter-btn sev-critical" data-filter-sev="critical" id="filt-sev-critical">Critical</button>
+            <button class="filter-btn sev-high" data-filter-sev="high" id="filt-sev-high">High</button>
+            <button class="filter-btn sev-moderate" data-filter-sev="moderate" id="filt-sev-moderate">Moderate</button>
+            <button class="filter-btn sev-low" data-filter-sev="low" id="filt-sev-low">Low</button>
+          </div>
+        </div>
+
+        <!-- Alert Cards -->
+        <div class="alert-cards-list" id="alert-cards-list">
+          <!-- populated by JS -->
+        </div>
+
+      </div><!-- /page-alerts -->
+
+
+      <!-- ════════════════════════════════════════
+           PAGE: REPORTS
+      ════════════════════════════════════════ -->
+      <div class="page-section hidden" id="page-reports">
+
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-title">Climate Reports</h1>
+            <p class="page-subtitle">Generate and download detailed climate analysis reports</p>
+          </div>
+          <div class="page-header-actions">
+            <select class="select-input compact-select" id="report-city-select">
+              <option value="all">All India</option>
+              <option value="ahmedabad">Ahmedabad</option>
+              <option value="delhi">New Delhi</option>
+              <option value="mumbai">Mumbai</option>
+              <option value="chennai">Chennai</option>
+              <option value="kolkata">Kolkata</option>
+              <option value="bengaluru">Bengaluru</option>
+              <option value="jaipur">Jaipur</option>
+              <option value="bhubaneswar">Bhubaneswar</option>
+            </select>
+            <input type="date" class="select-input compact-select" id="report-date-input" />
+            <button class="download-btn" id="download-pdf-btn">
+              <i data-lucide="download" size="15"></i>
+              Download PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- Report Summary Card -->
+        <div class="report-summary-card glass-card" id="report-summary-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="file-text" size="16"></i> Climate Summary Report</span>
+            <span class="report-date-tag" id="report-date-tag">26 Jun 2025</span>
+          </div>
+          <div class="report-kpi-grid" id="report-kpi-grid">
+            <div class="report-kpi">
+              <div class="report-kpi-icon" style="color:#ff6b6b">🌡️</div>
+              <div class="report-kpi-val" id="rep-max-val">37.4°C</div>
+              <div class="report-kpi-label">MAX TEMP</div>
+            </div>
+            <div class="report-kpi">
+              <div class="report-kpi-icon" style="color:#4dc3ff">❄️</div>
+              <div class="report-kpi-val" id="rep-min-val">24.8°C</div>
+              <div class="report-kpi-label">MIN TEMP</div>
+            </div>
+            <div class="report-kpi">
+              <div class="report-kpi-icon" style="color:#00e5cc">🌧️</div>
+              <div class="report-kpi-val" id="rep-rain-val">18.2 mm</div>
+              <div class="report-kpi-label">RAINFALL</div>
+            </div>
+            <div class="report-kpi">
+              <div class="report-kpi-icon" style="color:#a78bfa">💧</div>
+              <div class="report-kpi-val" id="rep-hum-val">68%</div>
+              <div class="report-kpi-label">HUMIDITY</div>
+            </div>
+            <div class="report-kpi">
+              <div class="report-kpi-icon" style="color:#f59e0b">💨</div>
+              <div class="report-kpi-val" id="rep-wind-val">12 km/h</div>
+              <div class="report-kpi-label">WIND SPEED</div>
+            </div>
+            <div class="report-kpi">
+              <div class="report-kpi-icon" style="color:#10b981">☁️</div>
+              <div class="report-kpi-val" id="rep-cond-val">Rain</div>
+              <div class="report-kpi-label">CONDITION</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly Trend Chart -->
+        <div class="chart-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="trending-up" size="16"></i> Weekly Temperature & Rainfall
+              Trend</span>
+            <span class="model-tag">7-Day Analysis</span>
+          </div>
+          <div class="chart-wrap" style="height:220px">
+            <canvas id="reportTempChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="bar-chart-2" size="16"></i> Weekly Rainfall Pattern</span>
+            <span class="model-tag">Precipitation Analysis</span>
+          </div>
+          <div class="chart-wrap" style="height:200px">
+            <canvas id="reportRainChart"></canvas>
+          </div>
+        </div>
+
+        <!-- AI Summary -->
+        <div class="ai-summary-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="sparkles" size="16"></i> AI Climate Summary</span>
+            <span class="model-tag">LightGBM · LSTM</span>
+          </div>
+          <div class="ai-summary-body">
+            <div class="ai-avatar">🤖</div>
+            <div class="ai-text" id="ai-summary-text">
+              Loading AI analysis…
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-reports -->
+
+
+      <!-- ════════════════════════════════════════
+           PAGE: ABOUT
+      ════════════════════════════════════════ -->
+      <div class="page-section hidden" id="page-about">
+
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-title">About ClimaTwin India</h1>
+            <p class="page-subtitle">ISRO Hackathon 2025 · AI-Powered Climate Digital Twin</p>
+          </div>
+          <div class="page-header-actions">
+            <span class="model-tag" style="font-size:12px;padding:6px 14px">v1.0 · Demo Build</span>
+          </div>
+        </div>
+
+        <!-- Project Overview -->
+        <div class="about-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="globe" size="16"></i> Project Overview</span>
+          </div>
+          <div class="about-body">
+            <div class="about-hero-text">
+              <p class="about-lead">
+                <strong>ClimaTwin India</strong> is a high-fidelity AI-powered Climate Digital Twin of the Indian
+                subcontinent, developed for the ISRO Hackathon 2025. It integrates satellite remote sensing data from
+                ISRO's INSAT constellation with IMD gridded observations to provide real-time climate monitoring,
+                short-term forecasting, and what-if scenario simulation.
+              </p>
+              <div class="about-objectives">
+                <div class="obj-item">
+                  <div class="obj-icon">🎯</div>
+                  <div>
+                    <div class="obj-title">Purpose</div>
+                    <div class="obj-desc">Create an operational climate intelligence platform for India that bridges
+                      satellite data, AI models, and actionable climate insights for policymakers and disaster
+                      management agencies.</div>
+                  </div>
+                </div>
+                <div class="obj-item">
+                  <div class="obj-icon">🔬</div>
+                  <div>
+                    <div class="obj-title">Digital Twin Concept</div>
+                    <div class="obj-desc">A digital twin is a real-time virtual replica of a physical system. For
+                      climate, this means a continuously updated AI model of India's atmosphere that mirrors actual
+                      conditions and enables "what-if" experimentation without real-world consequences.</div>
+                  </div>
+                </div>
+                <div class="obj-item">
+                  <div class="obj-icon">🚀</div>
+                  <div>
+                    <div class="obj-title">Key Objectives</div>
+                    <div class="obj-desc">7-day temperature & rainfall prediction at 0.25° resolution · Real-time
+                      extreme event detection · Scenario simulation for climate risk assessment · Scalable architecture
+                      for operational deployment.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Features -->
+        <div class="about-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="star" size="16"></i> Key Features</span>
+          </div>
+          <div class="features-grid">
+            <div class="feature-item">
+              <div class="feature-icon">🗺️</div>
+              <div class="feature-title">Interactive Climate Map</div>
+              <div class="feature-desc">0.25° resolution Leaflet map with temperature and rainfall layers, animated
+                weather effects, and state-level hover information.</div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon">📅</div>
+              <div class="feature-title">7-Day Forecast</div>
+              <div class="feature-desc">Calendar-based forecast view with weather condition icons, city-specific
+                statistics, and interactive date selection.</div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon">⚗️</div>
+              <div class="feature-title">What-If Simulation</div>
+              <div class="feature-desc">Scenario engine with real-time sliders for temperature, rainfall, humidity, and
+                CO₂ with projected impact analysis.</div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon">🚨</div>
+              <div class="feature-title">Alerts & Warnings</div>
+              <div class="feature-desc">Severity-classified weather alerts with actionable Do's and Don'ts, filterable
+                by status and severity level.</div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon">📊</div>
+              <div class="feature-title">Climate Reports</div>
+              <div class="feature-desc">Auto-generated PDF climate reports with AI summaries, weekly trend charts, and
+                per-city analysis.</div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon">📈</div>
+              <div class="feature-title">Historical Analysis</div>
+              <div class="feature-desc">25-year historical timeline scrubber showing temperature trends, rainfall
+                anomalies, and extreme event frequencies.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Technology Stack -->
+        <div class="about-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="cpu" size="16"></i> Technology Stack</span>
+          </div>
+          <div class="tech-stack-grid">
+            <div class="tech-category current">
+              <div class="tech-cat-header">
+                <span class="tech-cat-icon">🖥️</span>
+                <span class="tech-cat-title">Frontend <span class="tech-status-badge live">LIVE</span></span>
+              </div>
+              <div class="tech-items">
+                <div class="tech-item"><span class="tech-bullet cyan"></span>HTML5 · CSS3 · Vanilla JavaScript</div>
+                <div class="tech-item"><span class="tech-bullet cyan"></span>Leaflet.js — Interactive climate maps</div>
+                <div class="tech-item"><span class="tech-bullet cyan"></span>Chart.js — Data visualization</div>
+                <div class="tech-item"><span class="tech-bullet cyan"></span>Lucide Icons — UI iconography</div>
+                <div class="tech-item"><span class="tech-bullet cyan"></span>Space Grotesk · Inter — Typography</div>
+              </div>
+            </div>
+            <div class="tech-category future">
+              <div class="tech-cat-header">
+                <span class="tech-cat-icon">⚙️</span>
+                <span class="tech-cat-title">Backend <span class="tech-status-badge future-badge">PLANNED</span></span>
+              </div>
+              <div class="tech-items">
+                <div class="tech-item"><span class="tech-bullet violet"></span>Python 3.11+</div>
+                <div class="tech-item"><span class="tech-bullet violet"></span>Flask / FastAPI — REST API server</div>
+                <div class="tech-item"><span class="tech-bullet violet"></span>Pandas · NumPy — Data processing</div>
+                <div class="tech-item"><span class="tech-bullet violet"></span>NetCDF4 — Satellite data parsing</div>
+                <div class="tech-item"><span class="tech-bullet violet"></span>SQLite / PostgreSQL — Data storage</div>
+              </div>
+            </div>
+            <div class="tech-category future">
+              <div class="tech-cat-header">
+                <span class="tech-cat-icon">🧠</span>
+                <span class="tech-cat-title">Machine Learning <span
+                    class="tech-status-badge future-badge">PLANNED</span></span>
+              </div>
+              <div class="tech-items">
+                <div class="tech-item"><span class="tech-bullet amber"></span>LightGBM — Temperature prediction</div>
+                <div class="tech-item"><span class="tech-bullet amber"></span>XGBoost 2-Stage — Rainfall forecast</div>
+                <div class="tech-item"><span class="tech-bullet amber"></span>LSTM — 30-day time-series modeling</div>
+                <div class="tech-item"><span class="tech-bullet amber"></span>Scikit-learn — Feature engineering</div>
+                <div class="tech-item"><span class="tech-bullet amber"></span>SHAP — Model explainability</div>
+              </div>
+            </div>
+            <div class="tech-category future">
+              <div class="tech-cat-header">
+                <span class="tech-cat-icon">📡</span>
+                <span class="tech-cat-title">Data Sources <span
+                    class="tech-status-badge future-badge">PLANNED</span></span>
+              </div>
+              <div class="tech-items">
+                <div class="tech-item"><span class="tech-bullet green"></span>IMD — Gridded obs. (0.25°×0.25°)</div>
+                <div class="tech-item"><span class="tech-bullet green"></span>INSAT-3D/3DR — Geostationary data</div>
+                <div class="tech-item"><span class="tech-bullet green"></span>MOSDAC — Soil moisture, LST</div>
+                <div class="tech-item"><span class="tech-bullet green"></span>ISRO Bhuvan — DEM, LULC</div>
+                <div class="tech-item"><span class="tech-bullet green"></span>ERA5 — Reanalysis climate data</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Architecture Diagram -->
+        <div class="about-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="workflow" size="16"></i> System Architecture</span>
+            <span class="resolution-tag">Data → AI → Dashboard</span>
+          </div>
+          <div class="arch-flow">
+            <div class="arch-col">
+              <div class="arch-col-title">DATA INGESTION</div>
+              <div class="arch-node isro-node">🛰️ INSAT-3D/3DR<br><small>Satellite Imagery</small></div>
+              <div class="arch-node imd-node">🌦️ IMD Grid<br><small>Obs. Network</small></div>
+              <div class="arch-node mosdac-node">📡 MOSDAC/SAC<br><small>Land Surface</small></div>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-col">
+              <div class="arch-col-title">PROCESSING</div>
+              <div class="arch-node proc-node">⚙️ Feature Engineering<br><small>Pandas · NumPy</small></div>
+              <div class="arch-node proc-node">🔄 Data Fusion<br><small>Multi-source merge</small></div>
+              <div class="arch-node proc-node">📊 Grid Interpolation<br><small>0.25° resolution</small></div>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-col">
+              <div class="arch-col-title">AI MODELS</div>
+              <div class="arch-node ai-node">🌡️ LightGBM<br><small>Temperature</small></div>
+              <div class="arch-node ai-node">🌧️ XGBoost 2S<br><small>Rainfall</small></div>
+              <div class="arch-node ai-node">📈 LSTM Net<br><small>Time-Series</small></div>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-col">
+              <div class="arch-col-title">API LAYER</div>
+              <div class="arch-node api-node">🐍 Flask/FastAPI<br><small>REST Endpoints</small></div>
+              <div class="arch-node api-node">⚗️ Scenario Engine<br><small>What-If API</small></div>
+              <div class="arch-node api-node">🚨 Alert Engine<br><small>Threshold Rules</small></div>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-col">
+              <div class="arch-col-title">DASHBOARD</div>
+              <div class="arch-node dash-node">🗺️ Climate Map<br><small>Leaflet.js</small></div>
+              <div class="arch-node dash-node">📊 Charts<br><small>Chart.js</small></div>
+              <div class="arch-node dash-node">📱 6-Page SPA<br><small>HTML · CSS · JS</small></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team -->
+        <div class="about-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="users" size="16"></i> Project Team</span>
+            <span class="model-tag">ISRO Hackathon 2025</span>
+          </div>
+          <div class="team-grid">
+            <div class="team-member">
+              <div class="team-avatar" style="background:linear-gradient(135deg,#00d4ff,#7c3aed)">S</div>
+              <div class="team-name">Snehi Patel</div>
+              <div class="team-role">ML Engineer · LightGBM & XGBoost Models</div>
+            </div>
+            <div class="team-member">
+              <div class="team-avatar" style="background:linear-gradient(135deg,#10b981,#00d4ff)">J</div>
+              <div class="team-name">Juhi Vanjara</div>
+              <div class="team-role">ML Engineer · LSTM Time-Series & Data Fusion</div>
+            </div>
+            <div class="team-member">
+              <div class="team-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">Y</div>
+              <div class="team-name">Yashvi Sanghvi</div>
+              <div class="team-role">Frontend · Leaflet Maps, Chart.js, UI/UX</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-about -->
+
+    </div><!-- /content-col -->
+  </div><!-- /app-layout -->
+
+  <!-- ══════════ LOADING OVERLAY ══════════ -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <div class="loading-title">ClimaTwin India</div>
+      <div class="loading-sub">Initializing AI Models & Loading Climate Data…</div>
+      <div class="loading-steps" id="loading-steps">
+        <div class="loading-step active" id="ls-1">Connecting to MOSDAC / IMD endpoints</div>
+        <div class="loading-step" id="ls-2">Loading LightGBM temperature model</div>
+        <div class="loading-step" id="ls-3">Loading XGBoost rainfall model</div>
+        <div class="loading-step" id="ls-4">Initialising LSTM time-series engine</div>
+        <div class="loading-step" id="ls-5">Rendering India climate grid</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js?v=3"></script>
+  <script src="map.js?v=3"></script>
+  <script src="charts.js?v=3"></script>
+  <script src="whatif.js?v=3"></script>
+  <script src="pages.js?v=3"></script>
+  <script src="app.js?v=3"></script>
+</body>
+
+</html>

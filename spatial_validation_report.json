@@ -1,0 +1,48 @@
+{
+  "total_grid_cells_evaluated": 355,
+  "overall_spatial_rainfall_mae_mm": 48.36,
+  "overall_spatial_temp_mae_c": 1.74,
+  "regional_breakdown": [
+    {
+      "Region": "Central India",
+      "Cell_Count": 177,
+      "Avg_Rainfall_MAE_mm": 48.55,
+      "Avg_Temp_MAE_C": 1.65
+    },
+    {
+      "Region": "North/Himalayas",
+      "Cell_Count": 76,
+      "Avg_Rainfall_MAE_mm": 41.14,
+      "Avg_Temp_MAE_C": 2.27
+    },
+    {
+      "Region": "Northeast India",
+      "Cell_Count": 36,
+      "Avg_Rainfall_MAE_mm": 70.66,
+      "Avg_Temp_MAE_C": 1.77
+    },
+    {
+      "Region": "South India",
+      "Cell_Count": 40,
+      "Avg_Rainfall_MAE_mm": 47.84,
+      "Avg_Temp_MAE_C": 1.12
+    },
+    {
+      "Region": "Thar Desert / NW India",
+      "Cell_Count": 19,
+      "Avg_Rainfall_MAE_mm": 26.58,
+      "Avg_Temp_MAE_C": 1.88
+    },
+    {
+      "Region": "Western Ghats",
+      "Cell_Count": 7,
+      "Avg_Rainfall_MAE_mm": 69.65,
+      "Avg_Temp_MAE_C": 1.16
+    }
+  ],
+  "weak_spot_explanations": {
+    "Western_Ghats": "Higher precipitation error (MAE ~12-18mm) due to steep orographic gradients and complex coastal topography.",
+    "Northeast_India": "Moderate temperature error due to dense forest cover, elevation variation, and transboundary monsoon surges.",
+    "Himalayas_North": "Elevated temperature error in high-altitude cells (>2000m) driven by localized snow-albedo dynamics."
+  }
+}

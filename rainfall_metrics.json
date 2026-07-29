@@ -1,0 +1,80 @@
+{
+  "classifier": {
+    "accuracy": 0.893,
+    "f1_score": 0.8765
+  },
+  "regressor": {
+    "MAE": 79.683,
+    "RMSE": 120.523,
+    "R2": 0.3321
+  },
+  "combined_cascade": {
+    "MAE": 35.902,
+    "RMSE": 79.594,
+    "R2": 0.4476
+  },
+  "stage1_framework": "XGBoost",
+  "stage2a_framework": "LightGBM",
+  "stage2a_objective": "Tweedie (Raw)",
+  "stage2b_framework": "XGBoost",
+  "stage3_framework": "XGBoost",
+  "monsoon_evaluation": {
+    "MAE": 75.25,
+    "RMSE": 118.8,
+    "R2": 0.3818
+  },
+  "heavy_evaluation": {
+    "MAE_gt_50": 113.7,
+    "MAE_gt_100": 120.21
+  },
+  "category_metrics": [
+    {
+      "Category": "0-5 (Light)",
+      "Count": 343930,
+      "MAE (mm)": 8.1,
+      "RMSE (mm)": 30.63,
+      "R\u00b2": -1466.3487,
+      "Interval Coverage (%)": 82.8
+    },
+    {
+      "Category": "5-20 (Mod)",
+      "Count": 39872,
+      "MAE (mm)": 53.48,
+      "RMSE (mm)": 94.34,
+      "R\u00b2": -474.0137,
+      "Interval Coverage (%)": 77.4
+    },
+    {
+      "Category": "20-50 (Heavy)",
+      "Count": 36761,
+      "MAE (mm)": 73.9,
+      "RMSE (mm)": 118.05,
+      "R\u00b2": -187.2545,
+      "Interval Coverage (%)": 88.3
+    },
+    {
+      "Category": "50-100 (Very Heavy)",
+      "Count": 31992,
+      "MAE (mm)": 100.69,
+      "RMSE (mm)": 132.02,
+      "R\u00b2": -83.5319,
+      "Interval Coverage (%)": 89.3
+    },
+    {
+      "Category": "100-200 (Ext Heavy)",
+      "Count": 30531,
+      "MAE (mm)": 112.04,
+      "RMSE (mm)": 126.82,
+      "R\u00b2": -18.8211,
+      "Interval Coverage (%)": 84.6
+    },
+    {
+      "Category": "200+ (Exception)",
+      "Count": 33406,
+      "MAE (mm)": 127.69,
+      "RMSE (mm)": 175.91,
+      "R\u00b2": -0.0107,
+      "Interval Coverage (%)": 65.2
+    }
+  ]
+}

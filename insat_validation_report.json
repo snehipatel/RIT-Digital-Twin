@@ -1,0 +1,21 @@
+{
+  "description": "Validation of LightGBM model against INSAT satellite LST",
+  "period": "June 2023",
+  "note": "LST (Land Surface Temp) is 2-8C higher than air Max Temp due to surface heating",
+  "model_performance": {
+    "MAE_C": 0.551,
+    "RMSE_C": 0.713,
+    "R2": 0.9749
+  },
+  "satellite_correlation": {
+    "LST_vs_LightGBM_r": 0.3704,
+    "LST_vs_Actual_r": 0.374,
+    "mean_LST_bias_C": -0.75
+  },
+  "data_coverage": {
+    "total_tif_files": 970,
+    "daytime_processed": 371,
+    "daily_records": 8381,
+    "matched_records": 3832
+  }
+}

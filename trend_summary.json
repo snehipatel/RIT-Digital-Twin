@@ -1,0 +1,119 @@
+{
+  "Annual_Rainfall": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 12.4,
+    "significantly_decreasing_pct": 16.6,
+    "non_significant_pct": 71.0,
+    "max_positive_slope": 1127.3464,
+    "max_negative_slope": -343.0353,
+    "avg_slope": 4.0773
+  },
+  "Mean_Tmax": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 0.8,
+    "significantly_decreasing_pct": 61.6,
+    "non_significant_pct": 37.6,
+    "max_positive_slope": 0.0295,
+    "max_negative_slope": -0.0203,
+    "avg_slope": 0.0086
+  },
+  "Mean_Tmin": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 0.3,
+    "significantly_decreasing_pct": 66.9,
+    "non_significant_pct": 32.9,
+    "max_positive_slope": 0.0341,
+    "max_negative_slope": -0.0424,
+    "avg_slope": 0.0079
+  },
+  "R95p": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 8.0,
+    "significantly_decreasing_pct": 23.5,
+    "non_significant_pct": 68.5,
+    "max_positive_slope": 870.0134,
+    "max_negative_slope": -241.0332,
+    "avg_slope": 9.2546
+  },
+  "CDD": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 5.0,
+    "significantly_decreasing_pct": 8.0,
+    "non_significant_pct": 87.0,
+    "max_positive_slope": 0.4444,
+    "max_negative_slope": -16.1333,
+    "avg_slope": -0.0472
+  },
+  "CWD": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 28.5,
+    "significantly_decreasing_pct": 1.1,
+    "non_significant_pct": 70.4,
+    "max_positive_slope": 1.8,
+    "max_negative_slope": -0.1304,
+    "avg_slope": -0.0058
+  },
+  "R10mm": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 21.5,
+    "significantly_decreasing_pct": 6.1,
+    "non_significant_pct": 72.4,
+    "max_positive_slope": 14.4359,
+    "max_negative_slope": -1.2,
+    "avg_slope": -0.0397
+  },
+  "R20mm": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 20.2,
+    "significantly_decreasing_pct": 6.9,
+    "non_significant_pct": 72.9,
+    "max_positive_slope": 11.1667,
+    "max_negative_slope": -1.0385,
+    "avg_slope": -0.0319
+  },
+  "SDII": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 7.5,
+    "significantly_decreasing_pct": 25.7,
+    "non_significant_pct": 66.9,
+    "max_positive_slope": 4.5415,
+    "max_negative_slope": -1.1774,
+    "avg_slope": 0.0986
+  },
+  "TXx": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 5.2,
+    "significantly_decreasing_pct": 47.2,
+    "non_significant_pct": 47.5,
+    "max_positive_slope": 0.0643,
+    "max_negative_slope": -0.029,
+    "avg_slope": 0.0086
+  },
+  "TNn": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 1.1,
+    "significantly_decreasing_pct": 35.4,
+    "non_significant_pct": 63.5,
+    "max_positive_slope": 0.057,
+    "max_negative_slope": -0.0206,
+    "avg_slope": 0.0084
+  },
+  "WSDI": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 2.2,
+    "significantly_decreasing_pct": 39.8,
+    "non_significant_pct": 58.0,
+    "max_positive_slope": 0.6,
+    "max_negative_slope": -0.1081,
+    "avg_slope": 0.0016
+  },
+  "CSDI": {
+    "total_grid_cells": 362,
+    "significantly_increasing_pct": 77.3,
+    "significantly_decreasing_pct": 0.0,
+    "non_significant_pct": 22.7,
+    "max_positive_slope": 0.0,
+    "max_negative_slope": -1.5385,
+    "avg_slope": -0.0668
+  }
+}
