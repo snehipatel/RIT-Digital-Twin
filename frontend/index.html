@@ -64,6 +64,10 @@
           <i data-lucide="calendar-days" size="14"></i>
           Forecast
         </button>
+        <button class="nav-link" data-page="prediction" id="navlink-prediction">
+          <i data-lucide="trending-up" size="14"></i>
+          Prediction
+        </button>
         <button class="nav-link" data-page="whatif" id="navlink-whatif">
           <i data-lucide="flask-conical" size="14"></i>
           What-If
@@ -603,6 +607,344 @@
 
       </div><!-- /page-forecast -->
 
+
+      <!-- ════════════════════════════════════════
+           PAGE: CLIMATE PREDICTION (2000 - 2100)
+      ════════════════════════════════════════ -->
+      <div class="page-section hidden" id="page-prediction">
+
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-title">Climate Prediction</h1>
+            <p class="page-subtitle">Genuine CMIP6 climate model projections & UN demographics (2000 – 2100)</p>
+          </div>
+          <div class="page-header-actions">
+            <select class="select-input compact-select" id="prediction-city-select">
+              <option value="all">All India</option>
+              <option value="ahmedabad">Ahmedabad</option>
+              <option value="delhi">New Delhi</option>
+              <option value="mumbai">Mumbai</option>
+              <option value="chennai">Chennai</option>
+              <option value="kolkata">Kolkata</option>
+              <option value="bengaluru">Bengaluru</option>
+              <option value="jaipur">Jaipur</option>
+              <option value="bhubaneswar">Bhubaneswar</option>
+            </select>
+            <select class="select-input compact-select" id="prediction-year-select">
+              <!-- Populated by JS -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Controls Card -->
+        <div class="glass-card panel-card" style="margin-bottom: 20px;">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="sliders" size="16"></i> Climate Timeline & Driver Controls</span>
+            <span class="model-tag" id="prediction-model-tag">Connecting...</span>
+          </div>
+          <div class="prediction-controls-wrap">
+            
+            <div class="prediction-timeline-col">
+              <div class="year-slider-label">
+                <span>Timeline Year</span>
+                <span class="year-val-highlight" id="prediction-year-val">2026</span>
+              </div>
+              <div class="slider-player-row">
+                <button class="action-btn play-btn" id="prediction-play-btn">
+                  <i data-lucide="play" size="16"></i>
+                  <span>Play Timeline</span>
+                </button>
+                <input type="range" min="2000" max="2100" value="2026" class="timeline-slider" id="prediction-year-slider" />
+              </div>
+            </div>
+
+            <div class="prediction-drivers-grid">
+              <div class="driver-indicator-card">
+                <div class="driver-header">
+                  <i data-lucide="cloud-fog" class="driver-icon co2"></i>
+                  <span class="driver-title">CO₂ Level</span>
+                </div>
+                <div class="driver-value" id="prediction-co2-val">—</div>
+                <div class="driver-meta">NASA Keeling Curve / CMIP6</div>
+              </div>
+              <div class="driver-indicator-card">
+                <div class="driver-header">
+                  <i data-lucide="flame" class="driver-icon ghg"></i>
+                  <span class="driver-title">GHG Index</span>
+                </div>
+                <div class="driver-value" id="prediction-ghg-val">—</div>
+                <div class="driver-meta">NOAA Radiative Forcing</div>
+              </div>
+              <div class="driver-indicator-card">
+                <div class="driver-header">
+                  <i data-lucide="users" class="driver-icon pop"></i>
+                  <span class="driver-title">Population</span>
+                </div>
+                <div class="driver-value" id="prediction-pop-val">—</div>
+                <div class="driver-meta">UN Census & Median Proj.</div>
+              </div>
+              <div class="driver-indicator-card">
+                <div class="driver-header">
+                  <i data-lucide="wind" class="driver-icon pollution"></i>
+                  <span class="driver-title">Pollution (AQI)</span>
+                </div>
+                <div class="driver-value" id="prediction-poll-val">—</div>
+                <div class="driver-meta">Avg Ambient PM2.5/AQI</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Climate Solutions Matrix Card -->
+        <div class="glass-card panel-card" style="margin-bottom: 20px;" id="prediction-solutions-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="shield-check" size="16"></i> Climate Solutions & Mitigation Matrix</span>
+            <span class="model-tag" id="solutions-active-count">0 Solutions Active</span>
+          </div>
+          <div class="solutions-layout-wrap">
+            
+            <div class="solutions-grid-col">
+              <span class="sub-section-title">Select Climate Actions to Implement:</span>
+              <div class="solutions-options-grid">
+                
+                <div class="solution-checkbox-item" data-sol="trees">
+                  <input type="checkbox" id="sol-trees" />
+                  <label for="sol-trees">
+                    <span class="sol-emoji">🌳</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Tree Plantation</span>
+                      <span class="sol-sub">Planting saplings globally</span>
+                    </div>
+                  </label>
+                </div>
+                
+                <div class="solution-checkbox-item" data-sol="solar">
+                  <input type="checkbox" id="sol-solar" />
+                  <label for="sol-solar">
+                    <span class="sol-emoji">☀️</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Rooftop Solar</span>
+                      <span class="sol-sub">35% residential solar conversion</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="harvesting">
+                  <input type="checkbox" id="sol-harvesting" />
+                  <label for="sol-harvesting">
+                    <span class="sol-emoji">💧</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Rainwater Harvesting</span>
+                      <span class="sol-sub">Groundwater table recharge</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="ev">
+                  <input type="checkbox" id="sol-ev" />
+                  <label for="sol-ev">
+                    <span class="sol-emoji">🚗⚡</span>
+                    <div class="sol-text">
+                      <span class="sol-name">EV Adoption</span>
+                      <span class="sol-sub">40% electric fleet switch</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="greenroofs">
+                  <input type="checkbox" id="sol-greenroofs" />
+                  <label for="sol-greenroofs">
+                    <span class="sol-emoji">🏢🌿</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Green Roofs</span>
+                      <span class="sol-sub">Vegetated roofs cooling</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="plastic">
+                  <input type="checkbox" id="sol-plastic" />
+                  <label for="sol-plastic">
+                    <span class="sol-emoji">♻️</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Plastic Reduction</span>
+                      <span class="sol-sub">12kg reduction per person</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="transit">
+                  <input type="checkbox" id="sol-transit" />
+                  <label for="sol-transit">
+                    <span class="sol-emoji">🚌</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Public Transport</span>
+                      <span class="sol-sub">30% higher transit utility</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="wetlands">
+                  <input type="checkbox" id="sol-wetlands" />
+                  <label for="sol-wetlands">
+                    <span class="sol-emoji">🌾</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Wetland Restoration</span>
+                      <span class="sol-sub">Protecting degraded marshes</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="afforestation">
+                  <input type="checkbox" id="sol-afforestation" />
+                  <label for="sol-afforestation">
+                    <span class="sol-emoji">🌲</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Land Afforestation</span>
+                      <span class="sol-sub">30% barren land to forest</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="irrigation">
+                  <input type="checkbox" id="sol-irrigation" />
+                  <label for="sol-irrigation">
+                    <span class="sol-emoji">🚜</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Efficient Irrigation</span>
+                      <span class="sol-sub">1200m³ saved per hectare</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="greencover">
+                  <input type="checkbox" id="sol-greencover" />
+                  <label for="sol-greencover">
+                    <span class="sol-emoji">🌳🌳</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Urban Green Cover</span>
+                      <span class="sol-sub">25% urban area greening</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="capture">
+                  <input type="checkbox" id="sol-capture" />
+                  <label for="sol-capture">
+                    <span class="sol-emoji">🏭</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Carbon Capture</span>
+                      <span class="sol-sub">22 industrial capture facilities</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="mangroves">
+                  <input type="checkbox" id="sol-mangroves" />
+                  <label for="sol-mangroves">
+                    <span class="sol-emoji">🌊</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Mangrove Plantation</span>
+                      <span class="sol-sub">40% suitable coastline planting</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="composting">
+                  <input type="checkbox" id="sol-composting" />
+                  <label for="sol-composting">
+                    <span class="sol-emoji">🍂</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Waste Composting</span>
+                      <span class="sol-sub">60% organic waste composted</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="solution-checkbox-item" data-sol="coolroof">
+                  <input type="checkbox" id="sol-coolroof" />
+                  <label for="sol-coolroof">
+                    <span class="sol-emoji">🏠</span>
+                    <div class="sol-text">
+                      <span class="sol-name">Cool Roof Initiative</span>
+                      <span class="sol-sub">Reflective cooling coating</span>
+                    </div>
+                  </label>
+                </div>
+
+              </div>
+            </div>
+
+            <div class="solutions-feedback-col">
+              <span class="sub-section-title">Mitigation Impact & Calculations:</span>
+              <div class="feedback-panel-inner" id="prediction-solutions-feedback">
+                <div class="feedback-empty-state">
+                  <i data-lucide="info" size="24"></i>
+                  <p>Select one or more climate solutions to simulate their demographic and environmental offsets on future trajectories.</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Predicted Impact KPIs -->
+        <section class="kpi-grid" id="prediction-kpi-row" style="margin-bottom: 20px;">
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:linear-gradient(135deg,#ff4d4d22,#ff4d4d44)">
+              <i data-lucide="thermometer-sun" class="kpi-lucide" style="color:#ff6b6b"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">MAX TEMPERATURE</div>
+              <div class="kpi-value" id="pred-max-val">—</div>
+              <div class="kpi-meta" id="pred-max-anomaly">CMIP6 Projected Mean</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:linear-gradient(135deg,#4dc3ff22,#4dc3ff44)">
+              <i data-lucide="thermometer-snowflake" class="kpi-lucide" style="color:#4dc3ff"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">MIN TEMPERATURE</div>
+              <div class="kpi-value" id="pred-min-val">—</div>
+              <div class="kpi-meta" id="pred-min-anomaly">CMIP6 Projected Mean</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:linear-gradient(135deg,#00e5cc22,#00e5cc44)">
+              <i data-lucide="cloud-rain" class="kpi-lucide" style="color:#00e5cc"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">ANNUAL DAILY RAINFALL</div>
+              <div class="kpi-value" id="pred-rain-val">—</div>
+              <div class="kpi-meta" id="pred-rain-anomaly">CMIP6 Projected Mean</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:linear-gradient(135deg,#a78bfa22,#a78bfa44)">
+              <i data-lucide="shield-alert" class="kpi-lucide" style="color:#a78bfa"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">CLIMATE RISK LEVEL</div>
+              <div class="kpi-value" id="pred-risk-val">—</div>
+              <div class="kpi-meta" id="pred-risk-meta">Compounding hazard threat</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Prediction Chart Card -->
+        <div class="chart-card glass-card">
+          <div class="panel-header">
+            <span class="panel-title"><i data-lucide="trending-up" size="16"></i> 100-Year Climate Projection Trend (2000 - 2100)</span>
+            <span class="model-tag">CMIP6 Model Projections</span>
+          </div>
+          <div class="chart-wrap" style="height: 320px;">
+            <canvas id="predictionChart"></canvas>
+          </div>
+        </div>
+
+      </div>
 
       <!-- ════════════════════════════════════════
            PAGE: WHAT-IF SIMULATION

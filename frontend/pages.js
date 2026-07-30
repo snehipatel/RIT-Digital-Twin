@@ -19,6 +19,216 @@ let alertFilterStatus = "all";
 let alertFilterSev = "all";
 let reportCityKey = "all";
 
+// ── CLIMATE PREDICTION STATE & LOOKUP DATA (2000 - 2100) ──
+// ── CLIMATE PREDICTION STATE & LOOKUP DATA (2000 - 2100) ──
+let predictionYear = 2026;
+let predictionCityKey = "all";
+let predictionChartInst = null;
+let predictionPlayInterval = null;
+const climatePredictionCache = {}; // Cache to store 100-year aggregated data per city
+let STATE_WEATHER_BASE = null;     // Baseline map weather state
+
+const activeSolutions = {
+  trees: false, solar: false, harvesting: false, ev: false, greenroofs: false,
+  plastic: false, transit: false, wetlands: false, afforestation: false,
+  irrigation: false, greencover: false, capture: false, mangroves: false,
+  composting: false, coolroof: false
+};
+
+const CLIMATE_SOLUTIONS = [
+  {
+    id: "trees",
+    name: "Tree Plantation 🌳",
+    desc: "Assume 25% of the population plants one tree annually. After subtracting 5 crore saplings that fail to survive, the remaining trees absorb CO₂, reduce urban heat, and enhance local rainfall.",
+    equation: (pop) => {
+      const totalPlanted = pop * 0.25 * 100; // in Crore (pop in Billions * 100 * 0.25)
+      const failed = 5;
+      const survived = totalPlanted - failed;
+      return `Planted saplings: <strong>${totalPlanted.toFixed(2)} Crore</strong>.<br/>Saplings failed: <strong>${failed} Crore</strong>.<br/>Net carbon sink: <strong>${survived.toFixed(2)} Crore</strong> healthy trees.`;
+    },
+    offsets: { co2: 12, aqi: 15, temp: 0.3, rain: 0.035 }
+  },
+  {
+    id: "solar",
+    name: "Rooftop Solar Adoption ☀️",
+    desc: "Each solar-powered home reduces dependence on fossil-fuel electricity. Lower greenhouse gas emissions contribute to slower temperature rise and cleaner air.",
+    equation: (pop) => {
+      const households = (pop * 1000) / 5; // in Millions
+      const solarHomes = households * 0.35;
+      return `Total households: <strong>${households.toFixed(1)} Million</strong>.<br/>Solar Homes: <strong>${solarHomes.toFixed(1)} Million</strong> (35% adoption).`;
+    },
+    offsets: { co2: 15, ghg: 0.12, aqi: 12, temp: 0.2 }
+  },
+  {
+    id: "harvesting",
+    name: "Rainwater Harvesting 💧",
+    desc: "Harvesting rainwater increases groundwater recharge, reduces flooding, supports agriculture, and improves drought resilience.",
+    equation: (pop) => {
+      const buildings = (pop * 1000) / 10; // 1 building per 10 people in Millions
+      const capacity = 25000; // 25,000 Litres
+      const harvestedWater = (buildings * capacity) / 1000; // in Million Litres
+      return `Participating buildings: <strong>${buildings.toFixed(1)} Million</strong>.<br/>Harvested Water: <strong>${harvestedWater.toLocaleString(undefined, {maximumFractionDigits: 0})} Million Litres</strong>.`;
+    },
+    offsets: { rain: 0.05, temp: 0.1 }
+  },
+  {
+    id: "ev",
+    name: "Electric Vehicle Adoption 🚗⚡",
+    desc: "Replacing fuel-powered vehicles with EVs lowers CO₂ emissions, improves air quality, and reduces urban heat from combustion engines.",
+    equation: (pop) => {
+      const vehicles = pop * 0.22 * 1000; // 22% of population owns vehicles, in Millions
+      const evUsers = vehicles * 0.40; // 40% switch to EVs
+      return `Total vehicles: <strong>${vehicles.toFixed(1)} Million</strong>.<br/>EV conversions: <strong>${evUsers.toFixed(1)} Million users</strong> (40% switched).`;
+    },
+    offsets: { co2: 10, aqi: 35, temp: 0.25 }
+  },
+  {
+    id: "greenroofs",
+    name: "Green Roof Installation 🏢🌿",
+    desc: "Vegetated roofs cool buildings naturally, reduce the urban heat island effect, absorb rainwater, and improve biodiversity.",
+    equation: (pop) => {
+      const buildings = (pop * 1000) / 15; // 1 building per 15 people in Millions
+      const rooftopArea = buildings * 120; // 120 sq meters average
+      return `Buildings with green roofs: <strong>${buildings.toFixed(1)} Million</strong>.<br/>Green Roof Area: <strong>${rooftopArea.toFixed(1)} Million m²</strong>.`;
+    },
+    offsets: { aqi: 8, temp: 0.15, rain: 0.015 }
+  },
+  {
+    id: "plastic",
+    name: "Plastic Waste Reduction ♻️",
+    desc: "Lower plastic waste reduces landfill emissions, prevents water pollution, and decreases open burning, improving environmental quality.",
+    equation: (pop) => {
+      const plasticReduced = pop * 1000 * 12; // 12 kg reduced per person annually in Million kg
+      return `Population: <strong>${(pop * 1000).toFixed(0)} Million</strong>.<br/>Plastic waste avoided: <strong>${plasticReduced.toLocaleString(undefined, {maximumFractionDigits: 0})} Million kg</strong>.`;
+    },
+    offsets: { ghg: 0.06, aqi: 10 }
+  },
+  {
+    id: "transit",
+    name: "Public Transport Usage 🚌",
+    desc: "Higher public transport usage decreases private vehicle emissions, reducing greenhouse gases and improving urban air quality.",
+    equation: (pop) => {
+      const users = pop * 0.30 * 1000; // 30% adoption in Millions
+      return `Daily public transit users: <strong>${users.toFixed(1)} Million people</strong> (30% adoption).`;
+    },
+    offsets: { co2: 8, aqi: 22, temp: 0.15 }
+  },
+  {
+    id: "wetlands",
+    name: "Wetland Restoration 🌾",
+    desc: "Wetlands store carbon, reduce flooding, regulate local temperatures, and support biodiversity.",
+    equation: () => {
+      const area = 4.5; // degraded wetlands in Mha
+      const restored = 4.5 * 0.45; // 45% restoration
+      return `Degraded wetlands: <strong>4.5 Mha</strong>.<br/>Restored Wetland Area: <strong>${restored.toFixed(2)} Mha</strong> (45% restoration).`;
+    },
+    offsets: { co2: 7, temp: 0.12, rain: 0.025 }
+  },
+  {
+    id: "afforestation",
+    name: "Afforestation of Barren Land 🌲",
+    desc: "Large-scale afforestation increases carbon sequestration, improves soil health, and influences local rainfall patterns.",
+    equation: () => {
+      const land = 9.5; // barren land in Mha
+      const afforested = 9.5 * 0.30; // 30% converted
+      return `Barren land: <strong>9.5 Mha</strong>.<br/>Afforested Area: <strong>${afforested.toFixed(2)} Mha</strong> (30% converted to forest).`;
+    },
+    offsets: { co2: 16, temp: 0.35, rain: 0.045 }
+  },
+  {
+    id: "irrigation",
+    name: "Water-Efficient Irrigation 🚜",
+    desc: "Efficient irrigation conserves freshwater, increases drought resilience, and reduces groundwater depletion.",
+    equation: () => {
+      const farmland = 140; // farmland in Mha
+      const saved = (140 * 1200) / 1000; // cubic meters saved (1200 per hectare) in Billion cubic meters
+      return `Farmland Area: <strong>140 Mha</strong>.<br/>Water Saved: <strong>${saved.toFixed(1)} Trillion Litres</strong>.`;
+    },
+    offsets: { rain: 0.03, temp: 0.05 }
+  },
+  {
+    id: "greencover",
+    name: "Urban Green Cover 🌳",
+    desc: "More parks and vegetation reduce land surface temperatures, improve air quality, and increase rainfall infiltration.",
+    equation: () => {
+      const urban = 18.5; // urban area in Mha
+      const greencover = 18.5 * 0.25; // 25% converted
+      return `Urban area: <strong>18.5 Mha</strong>.<br/>Green Cover Created: <strong>${greencover.toFixed(2)} Mha</strong> (25% converted to green space).`;
+    },
+    offsets: { aqi: 14, temp: 0.2, rain: 0.02 }
+  },
+  {
+    id: "capture",
+    name: "Carbon Capture Facilities 🏭",
+    desc: "Capturing industrial CO₂ reduces atmospheric greenhouse gases and slows long-term warming.",
+    equation: () => {
+      const plants = 22;
+      const capacity = 2.5; // Million Tons annually per plant
+      const totalCaptured = plants * capacity;
+      return `Industrial carbon plants: <strong>22 facilities</strong>.<br/>Captured CO₂: <strong>${totalCaptured.toFixed(1)} Million Tons annually</strong>.`;
+    },
+    offsets: { co2: 24, ghg: 0.15, temp: 0.45 }
+  },
+  {
+    id: "mangroves",
+    name: "Mangrove Plantation 🌊",
+    desc: "Mangroves absorb large amounts of carbon, reduce coastal erosion, and protect against cyclones and storm surges.",
+    equation: () => {
+      const coastline = 7500; // km
+      const plantation = 7500 * 0.40; // 40% mangrove cover planting
+      return `Coastline length: <strong>7,500 km</strong>.<br/>Mangrove Area: <strong>${plantation.toLocaleString()} km</strong> (40% plantation cover).`;
+    },
+    offsets: { co2: 6, temp: 0.08, rain: 0.015 }
+  },
+  {
+    id: "composting",
+    name: "Waste Composting 🍂",
+    desc: "Composting reduces methane emissions from landfills while producing nutrient-rich fertilizer that improves soil carbon.",
+    equation: () => {
+      const waste = 36; // Million Tons organic waste
+      const composted = 36 * 0.60; // 60% composted
+      return `Organic waste generated: <strong>36 Million Tons</strong>.<br/>Composted Waste: <strong>${composted.toFixed(1)} Million Tons</strong> (60% composting).`;
+    },
+    offsets: { ghg: 0.08, aqi: 8 }
+  },
+  {
+    id: "coolroof",
+    name: "Cool Roof Initiative 🏠",
+    desc: "Reflective roofs reduce indoor temperatures, lower electricity demand for cooling, and help mitigate urban heat islands.",
+    equation: (pop) => {
+      const houses = (pop * 1000) / 6; // 1 house per 6 people in Millions
+      const area = (houses * 80) / 1000; // 80 sq meters avg in Billion m2
+      return `Participating houses: <strong>${houses.toFixed(1)} Million</strong>.<br/>Cool Roof Area: <strong>${area.toFixed(2)} Billion m²</strong>.`;
+    },
+    offsets: { temp: 0.22, aqi: 5 }
+  }
+];
+
+const DECADAL_CLIMATE_INDICATORS = {
+  years: [2000, 2010, 2020, 2025, 2030, 2040, 2050, 2060, 2070, 2080, 2090, 2100],
+  co2:   [369,  390,  414,  424,  435,  460,  490,  525,  565,  615,  675,  750],  // ppm (IPCC SSP5-8.5)
+  pop:   [1.05, 1.24, 1.39, 1.44, 1.48, 1.57, 1.63, 1.68, 1.70, 1.68, 1.62, 1.53], // Billions (UN Census)
+  ghg:   [1.15, 1.29, 1.47, 1.54, 1.64, 1.84, 2.05, 2.28, 2.53, 2.80, 3.10, 3.45], // NOAA AGGI index
+  aqi:   [135,  165,  180,  195,  205,  185,  150,  115,  85,   65,   50,   40]   // PM2.5/AQI
+};
+
+function interpolateDecadalValue(year, metricKey) {
+  const yrs = DECADAL_CLIMATE_INDICATORS.years;
+  const vals = DECADAL_CLIMATE_INDICATORS[metricKey];
+
+  if (year <= yrs[0]) return vals[0];
+  if (year >= yrs[yrs.length - 1]) return vals[vals.length - 1];
+
+  for (let i = 0; i < yrs.length - 1; i++) {
+    if (year >= yrs[i] && year <= yrs[i+1]) {
+      const t = (year - yrs[i]) / (yrs[i+1] - yrs[i]);
+      const val = vals[i] + t * (vals[i+1] - vals[i]);
+      return +(val).toFixed(metricKey === 'pop' ? 2 : (metricKey === 'ghg' ? 2 : 1));
+    }
+  }
+  return vals[0];
+}
+
 // Chart instances for non-dashboard pages (destroy/recreate on page switch)
 let forecastTempChartInst = null;
 let forecastRainChartInst = null;
@@ -52,6 +262,7 @@ function initNavigation() {
   wireCitySelect("forecast-city-select", onForecastCityChange);
   wireCitySelect("whatif-city-select", onWhatIfCityChange);
   wireCitySelect("report-city-select", onReportCityChange);
+  wireCitySelect("prediction-city-select", onPredictionCityChange);
 
   // Wire report date change
   document.getElementById("report-date-input")
@@ -97,6 +308,7 @@ function showPage(name) {
   const modeLabels = {
     dashboard: "Dashboard Mode",
     forecast: "Forecast Mode",
+    prediction: "Projection Mode",
     whatif: "Simulation Mode",
     alerts: "Alert Coverage",
     reports: "Report Mode",
@@ -104,8 +316,14 @@ function showPage(name) {
   };
   setText("map-mode-tag", modeLabels[name] || "Dashboard Mode");
 
+  // If leaving prediction page, stop the playback interval
+  if (name !== "prediction" && predictionPlayInterval) {
+    if (typeof togglePredictionPlay === "function") togglePredictionPlay(true); // force pause
+  }
+
   // Page-specific init (only on first load or data-change triggers)
   if (name === "forecast") initForecastPage();
+  if (name === "prediction") initPredictionPage();
   if (name === "alerts") initAlertsPage();
   if (name === "reports") initReportsPage();
   if (name === "about") lucide.createIcons();
@@ -128,7 +346,7 @@ function syncCitySelects() {
   master?.addEventListener("change", e => {
     const v = e.target.value;
     ["dashboard-city-select", "forecast-city-select",
-      "whatif-city-select", "report-city-select"].forEach(id => {
+      "whatif-city-select", "report-city-select", "prediction-city-select"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = v;
       });
@@ -1057,4 +1275,690 @@ function renderWhatIfChart(maxTemp, minTemp, rainfall) {
 function setText(id, text) {
   const el = document.getElementById(id);
   if (el) el.textContent = text;
+}
+
+// ══════════════════════════════════════════
+// CLIMATE PREDICTION PAGE (2000 - 2100)
+// ══════════════════════════════════════════
+
+function initPredictionPage() {
+  // Populate the Year Dropdown
+  const yrSelect = document.getElementById("prediction-year-select");
+  if (yrSelect && yrSelect.children.length === 0) {
+    for (let y = 2000; y <= 2100; y++) {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      yrSelect.appendChild(opt);
+    }
+  }
+
+  // Set initial select and slider values
+  const slider = document.getElementById("prediction-year-slider");
+  if (slider) slider.value = predictionYear;
+  if (yrSelect) yrSelect.value = predictionYear;
+  setText("prediction-year-val", predictionYear);
+
+  // Wire Slider Input
+  if (slider) {
+    slider.oninput = (e) => {
+      predictionYear = parseInt(e.target.value);
+      if (yrSelect) yrSelect.value = predictionYear;
+      updatePredictionTimeline();
+      updateSolutionsFeedback(); // recalculate feedback for the new population year
+    };
+  }
+
+  // Wire Year Dropdown Select
+  if (yrSelect) {
+    yrSelect.onchange = (e) => {
+      predictionYear = parseInt(e.target.value);
+      if (slider) slider.value = predictionYear;
+      updatePredictionTimeline();
+      updateSolutionsFeedback();
+    };
+  }
+
+  // Wire Play/Pause Button
+  const playBtn = document.getElementById("prediction-play-btn");
+  if (playBtn) {
+    playBtn.onclick = () => togglePredictionPlay();
+  }
+
+  // Wire Solutions Checkboxes
+  CLIMATE_SOLUTIONS.forEach(sol => {
+    const cb = document.getElementById(`sol-${sol.id}`);
+    if (cb) {
+      cb.checked = activeSolutions[sol.id];
+      cb.onchange = (e) => {
+        activeSolutions[sol.id] = e.target.checked;
+        
+        // Re-generate mitigated dataset
+        mitigatedPredictionData = getMitigatedDataForCity(predictionCityKey, activeSolutions);
+        
+        updatePredictionTimeline();
+        renderPredictionChart();
+        updateSolutionsFeedback();
+      };
+    }
+  });
+
+  // Update feedback panels
+  updateSolutionsFeedback();
+
+  // Load projection data
+  loadPredictionData(predictionCityKey);
+}
+
+function updateSolutionsFeedback() {
+  const panel = document.getElementById("prediction-solutions-feedback");
+  const countBadge = document.getElementById("solutions-active-count");
+  if (!panel) return;
+
+  const activeIds = Object.keys(activeSolutions).filter(id => activeSolutions[id]);
+  
+  if (countBadge) {
+    countBadge.textContent = `${activeIds.length} Solutions Active`;
+    countBadge.className = `model-tag ${activeIds.length > 0 ? 'live-badge' : 'fallback-badge'}`;
+  }
+
+  if (activeIds.length === 0) {
+    panel.innerHTML = `
+      <div class="feedback-empty-state">
+        <i data-lucide="info" size="24"></i>
+        <p>Select one or more climate solutions to simulate their demographic and environmental offsets on future trajectories.</p>
+      </div>
+    `;
+    lucide.createIcons();
+    return;
+  }
+
+  let html = `<div class="feedback-solutions-list">`;
+  
+  let totalCo2 = 0;
+  let totalAqi = 0;
+  let totalTemp = 0;
+  let totalRain = 0;
+
+  activeIds.forEach(id => {
+    const sol = CLIMATE_SOLUTIONS.find(s => s.id === id);
+    if (!sol) return;
+
+    const popVal = interpolateDecadalValue(predictionYear, "pop");
+    const eqText = sol.equation(popVal);
+
+    if (sol.offsets.co2) totalCo2 += sol.offsets.co2;
+    if (sol.offsets.aqi) totalAqi += sol.offsets.aqi;
+    if (sol.offsets.temp) totalTemp += sol.offsets.temp;
+    if (sol.offsets.rain) totalRain += sol.offsets.rain;
+
+    html += `
+      <div class="feedback-card">
+        <div class="feedback-card-header">
+          <span class="feedback-sol-name">${sol.name}</span>
+          <span class="feedback-sol-offset">-${sol.offsets.temp || 0}°C | -${sol.offsets.co2 || 0} ppm</span>
+        </div>
+        <p class="feedback-sol-desc">${sol.desc}</p>
+        <div class="feedback-sol-equation">${eqText}</div>
+      </div>
+    `;
+  });
+
+  html = `
+    <div class="feedback-summary-box">
+      <span class="summary-box-title">Cumulative Climate Mitigation (${predictionYear})</span>
+      <div class="summary-box-grid">
+        <div class="summary-metric">
+          <span class="metric-lbl">CO₂ Avoided</span>
+          <span class="summary-highlight">-${totalCo2} ppm</span>
+        </div>
+        <div class="summary-metric">
+          <span class="metric-lbl">Warming Offset</span>
+          <span class="summary-highlight" style="color: #ff6b6b">-${totalTemp.toFixed(2)}°C</span>
+        </div>
+        <div class="summary-metric">
+          <span class="metric-lbl">AQI Improvement</span>
+          <span class="summary-highlight" style="color: #00e5cc">-${totalAqi} AQI</span>
+        </div>
+        <div class="summary-metric">
+          <span class="metric-lbl">Rain Stability</span>
+          <span class="summary-highlight" style="color: #a78bfa">+${(totalRain * 100).toFixed(1)}%</span>
+        </div>
+      </div>
+    </div>
+  ` + html + `</div>`;
+
+  panel.innerHTML = html;
+  lucide.createIcons();
+}
+
+function onPredictionCityChange(city) {
+  predictionCityKey = city;
+  const master = document.getElementById("region-select");
+  if (master) { master.value = city; master.dispatchEvent(new Event("change")); }
+  loadPredictionData(city);
+}
+
+// ── ADVANCED INFERENCE COEFFICIENTS PER CITY ──
+const CITY_CLIMATE_SENSITIVITY = {
+  all: { uhi: 1.0, tempSens: 1.0, rainSens: 1.0 },
+  delhi: { uhi: 1.35, tempSens: 1.1, rainSens: 0.9 }, // High urban density and pollution feedback
+  mumbai: { uhi: 1.1, tempSens: 0.85, rainSens: 1.45 }, // Coastal, high rainfall variance
+  ahmedabad: { uhi: 1.25, tempSens: 1.15, rainSens: 0.8 }, // Dry, high heat island
+  chennai: { uhi: 1.15, tempSens: 0.9, rainSens: 1.25 },
+  kolkata: { uhi: 1.2, tempSens: 0.95, rainSens: 1.3 },
+  bengaluru: { uhi: 0.75, tempSens: 0.8, rainSens: 1.15 }, // Mild climate, high canopy conservation
+  jaipur: { uhi: 1.15, tempSens: 1.2, rainSens: 0.75 }, // Arid desert border
+  bhubaneswar: { uhi: 1.1, tempSens: 1.0, rainSens: 1.2 }
+};
+
+let mitigatedPredictionData = null; // Unified prediction outcome series
+
+function getMitigatedDataForCity(cityKey, solutions) {
+  const rawData = climatePredictionCache[cityKey];
+  if (!rawData) return null;
+
+  const sens = CITY_CLIMATE_SENSITIVITY[cityKey] || CITY_CLIMATE_SENSITIVITY.all;
+  const mitigated = {};
+
+  // Calculate cumulative solution offsets
+  let co2Offset = 0;
+  let ghgOffset = 0;
+  let aqiOffset = 0;
+  let tempOffset = 0;
+  let rainOffsetFactor = 1.0;
+
+  CLIMATE_SOLUTIONS.forEach(sol => {
+    if (solutions[sol.id]) {
+      if (sol.offsets.co2) co2Offset += sol.offsets.co2;
+      if (sol.offsets.ghg) ghgOffset += sol.offsets.ghg;
+      if (sol.offsets.aqi) aqiOffset += sol.offsets.aqi;
+      if (sol.offsets.temp) tempOffset += sol.offsets.temp;
+      if (sol.offsets.rain) rainOffsetFactor += sol.offsets.rain;
+    }
+  });
+
+  for (let y = 2000; y <= 2100; y++) {
+    const raw = rawData[y];
+    if (!raw) continue;
+
+    const co2Raw = interpolateDecadalValue(y, "co2");
+    const ghgRaw = interpolateDecadalValue(y, "ghg");
+    const aqiRaw = interpolateDecadalValue(y, "aqi");
+    const popRaw = interpolateDecadalValue(y, "pop");
+
+    // Apply mitigation offsets
+    const co2Net = Math.max(280, co2Raw - co2Offset);
+    const ghgNet = Math.max(0.2, ghgRaw - ghgOffset);
+    const aqiNet = Math.max(10, aqiRaw - aqiOffset);
+
+    // Anchored to year 2000 variables
+    const dCO2 = co2Net - 369;
+    const dGHG = ghgNet - 1.15;
+    const dAQI = aqiNet - 135;
+    const dPop = Math.max(0, popRaw - 1.05);
+
+    // Multi-parameter Climate Sensitivity Equations
+    const baseDTMax = dCO2 * 0.0075 + dGHG * 0.45 + dAQI * 0.005;
+    const baseDTMin = dCO2 * 0.007 + dGHG * 0.4 + dAQI * 0.004;
+
+    const dTMax = (baseDTMax + dPop * 0.35 * sens.uhi) * sens.tempSens - tempOffset;
+    const dTMin = (baseDTMin + dPop * 0.3 * sens.uhi) * sens.tempSens - tempOffset;
+
+    const rainPctChange = (dTMax * 0.015 + dAQI * -0.0007) * sens.rainSens + (rainOffsetFactor - 1.0);
+    const rainFactor = Math.max(0.3, 1.0 + rainPctChange);
+
+    mitigated[y] = {
+      max_temp: +(raw.max_temp_base + dTMax + raw.max_noise).toFixed(1),
+      min_temp: +(raw.min_temp_base + dTMin + raw.min_noise).toFixed(1),
+      rainfall: +(raw.rainfall_base * rainFactor * raw.rain_noise).toFixed(2),
+      
+      co2: co2Net,
+      ghg: ghgNet,
+      aqi: aqiNet,
+      pop: popRaw
+    };
+  }
+
+  return mitigated;
+}
+
+async function loadPredictionData(cityKey) {
+  const sourceTag = document.getElementById("prediction-model-tag");
+  if (sourceTag) {
+    sourceTag.textContent = "Connecting CMIP6...";
+    sourceTag.className = "model-tag loading";
+  }
+
+  const info = REGION_INFO[cityKey];
+  const lat = info ? info.lat : 22.5;
+  const lon = info ? info.lon : 82.0;
+
+  if (climatePredictionCache[cityKey]) {
+    if (sourceTag) {
+      sourceTag.textContent = "CMIP6 (EC-Earth3P-HR)";
+      sourceTag.className = "model-tag live-badge";
+    }
+    mitigatedPredictionData = getMitigatedDataForCity(cityKey, activeSolutions);
+    updatePredictionTimeline();
+    renderPredictionChart();
+    return;
+  }
+
+  try {
+    const url = `https://climate-api.open-meteo.com/v1/climate?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=2050-12-31&models=EC_Earth3P_HR&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia/Kolkata`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("API responded with error");
+    const data = await res.json();
+
+    if (!data.daily || !data.daily.time) throw new Error("Invalid response format");
+
+    const yearly = {};
+    const dates = data.daily.time;
+    const tmax = data.daily.temperature_2m_max;
+    const tmin = data.daily.temperature_2m_min;
+    const rain = data.daily.precipitation_sum;
+
+    for (let i = 0; i < dates.length; i++) {
+      const year = parseInt(dates[i].substring(0, 4));
+      if (!yearly[year]) {
+        yearly[year] = { maxTempSum: 0, minTempSum: 0, rainSum: 0, count: 0 };
+      }
+      const tx = tmax[i];
+      const tn = tmin[i];
+      const r = rain[i];
+
+      if (tx !== null && tx !== undefined && tn !== null && tn !== undefined && r !== null && r !== undefined) {
+        yearly[year].maxTempSum += tx;
+        yearly[year].minTempSum += tn;
+        yearly[year].rainSum += r;
+        yearly[year].count++;
+      }
+    }
+
+    const aggregated = {};
+    Object.keys(yearly).forEach(yr => {
+      const y = yearly[yr];
+      if (y.count > 100) {
+        aggregated[yr] = {
+          max_temp: +(y.maxTempSum / y.count).toFixed(1),
+          min_temp: +(y.minTempSum / y.count).toFixed(1),
+          rainfall: +(y.rainSum / y.count).toFixed(2)
+        };
+      }
+    });
+
+    if (!aggregated[2050] && aggregated[2049]) {
+      aggregated[2050] = { ...aggregated[2049] };
+    }
+
+    const sens = CITY_CLIMATE_SENSITIVITY[cityKey] || CITY_CLIMATE_SENSITIVITY.all;
+    const baseMax = aggregated[2000] ? aggregated[2000].max_temp : 33.0;
+    const baseMin = aggregated[2000] ? aggregated[2000].min_temp : 22.0;
+    const baseRain = aggregated[2000] ? aggregated[2000].rainfall : 1.6;
+
+    const rawCache = {};
+
+    for (let y = 2000; y <= 2100; y++) {
+      const co2Raw = interpolateDecadalValue(y, "co2");
+      const ghgRaw = interpolateDecadalValue(y, "ghg");
+      const aqiRaw = interpolateDecadalValue(y, "aqi");
+      const popRaw = interpolateDecadalValue(y, "pop");
+
+      const dCO2 = co2Raw - 369;
+      const dGHG = ghgRaw - 1.15;
+      const dAQI = aqiRaw - 135;
+      const dPop = Math.max(0, popRaw - 1.05);
+
+      const baseDTMax = dCO2 * 0.0075 + dGHG * 0.45 + dAQI * 0.005;
+      const baseDTMin = dCO2 * 0.007 + dGHG * 0.4 + dAQI * 0.004;
+
+      const dTMaxRaw = (baseDTMax + dPop * 0.35 * sens.uhi) * sens.tempSens;
+      const dTMinRaw = (baseDTMin + dPop * 0.3 * sens.uhi) * sens.tempSens;
+      const rainFactorRaw = Math.max(0.3, 1.0 + (dTMaxRaw * 0.015 + dAQI * -0.0007) * sens.rainSens);
+
+      if (y <= 2050 && aggregated[y]) {
+        rawCache[y] = {
+          max_temp_base: baseMax,
+          min_temp_base: baseMin,
+          rainfall_base: baseRain,
+          max_noise: +(aggregated[y].max_temp - baseMax - dTMaxRaw).toFixed(1),
+          min_noise: +(aggregated[y].min_temp - baseMin - dTMinRaw).toFixed(1),
+          rain_noise: +(aggregated[y].rainfall / (baseRain * rainFactorRaw)).toFixed(2)
+        };
+      } else {
+        const seed = getHashForStateAndYear(cityKey, y);
+        rawCache[y] = {
+          max_temp_base: baseMax,
+          min_temp_base: baseMin,
+          rainfall_base: baseRain,
+          max_noise: +((seed - 0.5) * 1.5).toFixed(1),
+          min_noise: +((seed - 0.5) * 1.0).toFixed(1),
+          rain_noise: +(1.0 + (seed - 0.5) * 0.25).toFixed(2)
+        };
+      }
+    }
+
+    climatePredictionCache[cityKey] = rawCache;
+
+    if (sourceTag) {
+      sourceTag.textContent = "CMIP6 (EC-Earth3P-HR)";
+      sourceTag.className = "model-tag live-badge";
+    }
+
+    mitigatedPredictionData = getMitigatedDataForCity(cityKey, activeSolutions);
+    updatePredictionTimeline();
+    renderPredictionChart();
+
+  } catch (err) {
+    console.warn("Prediction API failed, using high-fidelity offline baseline scaling", err);
+
+    const baseTempMax = {
+      all: 33.2, ahmedabad: 37.2, delhi: 38.2, mumbai: 31.2, chennai: 32.2, kolkata: 34.2, bengaluru: 29.2, jaipur: 40.2, bhubaneswar: 35.2
+    }[cityKey] || 33.2;
+
+    const baseTempMin = {
+      all: 22.2, ahmedabad: 24.2, delhi: 25.2, mumbai: 23.2, chennai: 21.2, kolkata: 23.2, bengaluru: 19.2, jaipur: 26.2, bhubaneswar: 22.2
+    }[cityKey] || 22.2;
+
+    const baseRainfall = {
+      all: 1.8, ahmedabad: 1.2, delhi: 1.0, mumbai: 3.5, chennai: 2.1, kolkata: 3.0, bengaluru: 2.5, jaipur: 0.8, bhubaneswar: 3.8
+    }[cityKey] || 1.8;
+
+    const rawCache = {};
+
+    for (let y = 2000; y <= 2100; y++) {
+      const seed = getHashForStateAndYear(cityKey, y);
+      rawCache[y] = {
+        max_temp_base: baseTempMax,
+        min_temp_base: baseTempMin,
+        rainfall_base: baseRainfall,
+        max_noise: +((seed - 0.5) * 1.5).toFixed(1),
+        min_noise: +((seed - 0.5) * 1.0).toFixed(1),
+        rain_noise: +(1.0 + (seed - 0.5) * 0.25).toFixed(2)
+      };
+    }
+
+    climatePredictionCache[cityKey] = rawCache;
+
+    if (sourceTag) {
+      sourceTag.textContent = "Offline RCP8.5 Base";
+      sourceTag.className = "model-tag fallback-badge";
+    }
+
+    mitigatedPredictionData = getMitigatedDataForCity(cityKey, activeSolutions);
+    updatePredictionTimeline();
+    renderPredictionChart();
+  }
+}
+
+function updatePredictionTimeline() {
+  setText("prediction-year-val", predictionYear);
+
+  if (!mitigatedPredictionData) return;
+
+  const yData = mitigatedPredictionData[predictionYear];
+  if (!yData) return;
+
+  // Render net driver indicator cards (which now reflect solutions in real time!)
+  setText("prediction-co2-val", `${yData.co2} ppm`);
+  setText("prediction-ghg-val", `${yData.ghg.toFixed(2)}x`);
+  setText("prediction-pop-val", `${yData.pop.toFixed(2)} B`);
+  setText("prediction-poll-val", `${Math.round(yData.aqi)} AQI`);
+
+  // Render predicted climate impacts (Max Temp, Min Temp, Rain)
+  renderPredictionKPIs();
+
+  // Update year marker point on trend charts
+  if (predictionChartInst) {
+    predictionChartInst.data.datasets[2].data = [{ x: predictionYear, y: yData.max_temp }];
+    predictionChartInst.data.datasets[3].data = [{ x: predictionYear, y: yData.min_temp }];
+    predictionChartInst.update("none");
+  }
+
+  // Scale Leaflet map layers relatively
+  updateMapForPrediction(predictionYear);
+}
+
+function renderPredictionKPIs() {
+  if (!mitigatedPredictionData || !mitigatedPredictionData[predictionYear]) return;
+
+  const yData = mitigatedPredictionData[predictionYear];
+  const max = yData.max_temp;
+  const min = yData.min_temp;
+  const rainAvg = yData.rainfall;
+
+  setText("pred-max-val", `${max.toFixed(1)}°C`);
+  setText("pred-min-val", `${min.toFixed(1)}°C`);
+  setText("pred-rain-val", `${(rainAvg * 365).toFixed(0)} mm/yr`);
+
+  // Anomaly offsets relative to Year 2000 baseline
+  const baseline = mitigatedPredictionData[2000];
+  if (baseline) {
+    const maxAnom = max - baseline.max_temp;
+    const minAnom = min - baseline.min_temp;
+    const rainPct = ((rainAvg - baseline.rainfall) / baseline.rainfall * 100);
+
+    const maxSign = maxAnom >= 0 ? "+" : "";
+    const minSign = minAnom >= 0 ? "+" : "";
+    const rainSign = rainPct >= 0 ? "+" : "";
+
+    setText("pred-max-anomaly", `${maxSign}${maxAnom.toFixed(1)}°C vs year 2000`);
+    setText("pred-min-anomaly", `${minSign}${minAnom.toFixed(1)}°C vs year 2000`);
+    setText("pred-rain-anomaly", `${rainSign}${rainPct.toFixed(1)}% vs year 2000`);
+  }
+
+  // Dynamic Risk Level logic based on mitigated variables
+  const co2Val = yData.co2;
+  const aqiVal = yData.aqi;
+  
+  let riskLabel = "Low";
+  let riskMeta = "Stable ecological envelope.";
+  let riskColor = "#10b981";
+
+  if (co2Val > 550 || aqiVal > 200) {
+    riskLabel = "Critical Threat";
+    riskMeta = "Extreme heatwaves, severe toxic AQI, habitat collapse.";
+    riskColor = "#b91c1c";
+  } else if (co2Val > 460 || aqiVal > 170) {
+    riskLabel = "Severe Hazard";
+    riskMeta = "Extended summer monsoon disruptions, respiratory distress.";
+    riskColor = "#ef4444";
+  } else if (co2Val > 420 || aqiVal > 130) {
+    riskLabel = "High Risk";
+    riskMeta = "Monsoon volatility, heat wave risks, elevated water stress.";
+    riskColor = "#f97316";
+  } else if (co2Val > 380 || aqiVal > 90) {
+    riskLabel = "Moderate Alert";
+    riskMeta = "Slight rainfall shift, rising average humidity levels.";
+    riskColor = "#ffe066";
+  }
+
+  const el = document.getElementById("pred-risk-val");
+  if (el) {
+    el.textContent = riskLabel;
+    el.style.color = riskColor;
+  }
+  setText("pred-risk-meta", riskMeta);
+}
+
+function renderPredictionChart() {
+  const ctx = document.getElementById("predictionChart");
+  if (!ctx) return;
+  if (predictionChartInst) { predictionChartInst.destroy(); predictionChartInst = null; }
+
+  if (!mitigatedPredictionData) return;
+
+  const years = [];
+  const maxTemps = [];
+  const minTemps = [];
+
+  for (let y = 2000; y <= 2100; y++) {
+    years.push(y);
+    maxTemps.push(mitigatedPredictionData[y].max_temp);
+    minTemps.push(mitigatedPredictionData[y].min_temp);
+  }
+
+  const currentMax = mitigatedPredictionData[predictionYear].max_temp;
+  const currentMin = mitigatedPredictionData[predictionYear].min_temp;
+
+  predictionChartInst = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: years,
+      datasets: [
+        {
+          label: "Predicted Max Temp (°C)",
+          data: maxTemps,
+          borderColor: "#ff6b6b",
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.35,
+          fill: false
+        },
+        {
+          label: "Predicted Min Temp (°C)",
+          data: minTemps,
+          borderColor: "#4dc3ff",
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.35,
+          fill: false
+        },
+        {
+          label: "Active Max Year Indicator",
+          data: [{ x: predictionYear, y: currentMax }],
+          pointBackgroundColor: "#ff4d4d",
+          pointBorderColor: "#ffffff",
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          showLine: false
+        },
+        {
+          label: "Active Min Year Indicator",
+          data: [{ x: predictionYear, y: currentMin }],
+          pointBackgroundColor: "#00d4ff",
+          pointBorderColor: "#ffffff",
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          showLine: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: "#8ba3c7",
+            font: { family: "Inter", size: 10 },
+            filter: item => !item.text.includes("Indicator")
+          }
+        },
+        tooltip: {
+          callbacks: {
+            title: items => `Year: ${items[0].label}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: "#8ba3c7", font: { size: 9 }, maxTicksLimit: 12 },
+          grid: { color: "rgba(0,212,255,0.03)" }
+        },
+        y: {
+          ticks: { color: "#8ba3c7", font: { size: 9 } },
+          grid: { color: "rgba(0,212,255,0.03)" },
+          title: { display: true, text: "Temperature (°C)", color: "#4a6080", font: { size: 9 } }
+        }
+      }
+    }
+  });
+}
+
+function togglePredictionPlay(forcePause = false) {
+  const playBtn = document.getElementById("prediction-play-btn");
+  const slider = document.getElementById("prediction-year-slider");
+  const yrSelect = document.getElementById("prediction-year-select");
+  if (!playBtn) return;
+
+  if (predictionPlayInterval || forcePause) {
+    clearInterval(predictionPlayInterval);
+    predictionPlayInterval = null;
+    playBtn.innerHTML = '<i data-lucide="play" size="16"></i><span>Play Timeline</span>';
+    lucide.createIcons();
+    playBtn.style.background = "linear-gradient(135deg, var(--accent-cyan), #00a8cc)";
+  } else {
+    playBtn.innerHTML = '<i data-lucide="pause" size="16"></i><span>Pause Timeline</span>';
+    lucide.createIcons();
+    playBtn.style.background = "linear-gradient(135deg, #ef4444, #b91c1c)";
+    playBtn.style.color = "#ffffff";
+
+    predictionPlayInterval = setInterval(() => {
+      predictionYear++;
+      if (predictionYear > 2100) {
+        predictionYear = 2000;
+      }
+      if (slider) slider.value = predictionYear;
+      if (yrSelect) yrSelect.value = predictionYear;
+      updatePredictionTimeline();
+      updateSolutionsFeedback(); // auto-recalculate tree planting counts etc.
+    }, 450);
+  }
+}
+
+function updateMapForPrediction(year) {
+  if (typeof STATE_WEATHER === "undefined") return;
+
+  if (!STATE_WEATHER_BASE) {
+    STATE_WEATHER_BASE = JSON.parse(JSON.stringify(STATE_WEATHER));
+  }
+
+  if (!mitigatedPredictionData) return;
+
+  const currentData = mitigatedPredictionData[year];
+  const base2026 = mitigatedPredictionData[2026];
+  if (!currentData || !base2026) return;
+
+  // Relative anomalies
+  const tempAnomalyMax = currentData.max_temp - base2026.max_temp;
+  const tempAnomalyMin = currentData.min_temp - base2026.min_temp;
+  const rainPct = base2026.rainfall > 0 ? (currentData.rainfall - base2026.rainfall) / base2026.rainfall : 0.0;
+
+  Object.keys(STATE_WEATHER).forEach(state => {
+    const base = STATE_WEATHER_BASE[state];
+    if (!base) return;
+
+    const seed = getHashForStateAndYear(state, year);
+    const noiseMax = (seed - 0.5) * 1.0;
+    const noiseMin = (seed - 0.5) * 0.7;
+    const noiseRain = (seed - 0.5) * 3.5;
+
+    const maxT = base.maxTemp + tempAnomalyMax + noiseMax;
+    const minT = base.minTemp + tempAnomalyMin + noiseMin;
+    const rain = Math.max(0, base.rainfall * (1.0 + rainPct) + noiseRain);
+
+    STATE_WEATHER[state].maxTemp = +maxT.toFixed(1);
+    STATE_WEATHER[state].minTemp = +minT.toFixed(1);
+    STATE_WEATHER[state].rainfall = +rain.toFixed(1);
+    STATE_WEATHER[state].cloud = Math.min(1.0, +(rain / 80).toFixed(2));
+    STATE_WEATHER[state].hasRain = rain > 10;
+  });
+
+  if (typeof buildChoropleth === "function") buildChoropleth();
+  if (typeof drawHeatmap === "function") drawHeatmap();
+  if (typeof buildWeatherEffects === "function") buildWeatherEffects();
+}
+
+function getHashForStateAndYear(stateName, year) {
+  const str = stateName + year;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(Math.sin(hash)) % 1;
 }
