@@ -10,19 +10,21 @@
 // ══════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════
-let currentPage       = "dashboard";
-let forecastSelDay    = 0;          // index into FORECAST_7DAY_EXTENDED
-let forecastCityKey   = "all";
+let currentPage = "dashboard";
+let forecastSelDay = 0;          // index into FORECAST_7DAY_EXTENDED
+let forecastCityKey = "all";
+let activeForecastData = null;   // Real-time forecast data from Open-Meteo API
+const forecastCache = {};        // Session cache to prevent redundant API hits
 let alertFilterStatus = "all";
-let alertFilterSev    = "all";
-let reportCityKey     = "all";
+let alertFilterSev = "all";
+let reportCityKey = "all";
 
 // Chart instances for non-dashboard pages (destroy/recreate on page switch)
 let forecastTempChartInst = null;
 let forecastRainChartInst = null;
 let reportTempChartInst = null;
 let reportRainChartInst = null;
-let whatifChartInst   = null;
+let whatifChartInst = null;
 
 // ══════════════════════════════════════════
 // NAVIGATION
@@ -47,9 +49,9 @@ function initNavigation() {
 
   // Wire city dropdowns on all pages
   wireCitySelect("dashboard-city-select", onDashboardCityChange);
-  wireCitySelect("forecast-city-select",  onForecastCityChange);
-  wireCitySelect("whatif-city-select",    onWhatIfCityChange);
-  wireCitySelect("report-city-select",    onReportCityChange);
+  wireCitySelect("forecast-city-select", onForecastCityChange);
+  wireCitySelect("whatif-city-select", onWhatIfCityChange);
+  wireCitySelect("report-city-select", onReportCityChange);
 
   // Wire report date change
   document.getElementById("report-date-input")
@@ -94,19 +96,19 @@ function showPage(name) {
   // Map mode tag
   const modeLabels = {
     dashboard: "Dashboard Mode",
-    forecast:  "Forecast Mode",
-    whatif:    "Simulation Mode",
-    alerts:    "Alert Coverage",
-    reports:   "Report Mode",
-    about:     "Info Mode"
+    forecast: "Forecast Mode",
+    whatif: "Simulation Mode",
+    alerts: "Alert Coverage",
+    reports: "Report Mode",
+    about: "Info Mode"
   };
   setText("map-mode-tag", modeLabels[name] || "Dashboard Mode");
 
   // Page-specific init (only on first load or data-change triggers)
-  if (name === "forecast")  initForecastPage();
-  if (name === "alerts")    initAlertsPage();
-  if (name === "reports")   initReportsPage();
-  if (name === "about")     lucide.createIcons();
+  if (name === "forecast") initForecastPage();
+  if (name === "alerts") initAlertsPage();
+  if (name === "reports") initReportsPage();
+  if (name === "about") lucide.createIcons();
 
   // Scroll content-col to top
   const col = document.getElementById("content-col");
@@ -125,11 +127,11 @@ function syncCitySelects() {
   const master = document.getElementById("region-select");
   master?.addEventListener("change", e => {
     const v = e.target.value;
-    ["dashboard-city-select","forecast-city-select",
-     "whatif-city-select","report-city-select"].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = v;
-    });
+    ["dashboard-city-select", "forecast-city-select",
+      "whatif-city-select", "report-city-select"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = v;
+      });
   });
 }
 
@@ -144,8 +146,7 @@ function onForecastCityChange(city) {
   forecastCityKey = city;
   const master = document.getElementById("region-select");
   if (master) { master.value = city; master.dispatchEvent(new Event("change")); }
-  renderForecastCalendar();
-  if (forecastSelDay >= 0) renderForecastDayStats(forecastSelDay);
+  loadForecastData(city);
 }
 
 function onWhatIfCityChange(city) {
@@ -155,9 +156,9 @@ function onWhatIfCityChange(city) {
   const off = CITY_FORECAST_DATA[city]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 };
   const s = CLIMATE_DATA.all_india_summary;
   setSliderVal("wi-maxtemp-slider", "wi-maxtemp-val", +(s.max_temp + off.max).toFixed(1), "°C");
-  setSliderVal("wi-mintemp-slider", "wi-mintemp-val", +(s.min_temp + (off.min||0)).toFixed(1), "°C");
-  setSliderVal("wi-rain-slider",    "wi-rain-val",    Math.max(0, +(s.rainfall_24h + off.rain).toFixed(1)), " mm");
-  setSliderVal("wi-hum-slider",     "wi-hum-val",     Math.max(0, +(s.humidity + (off.hum||0))), "%");
+  setSliderVal("wi-mintemp-slider", "wi-mintemp-val", +(s.min_temp + (off.min || 0)).toFixed(1), "°C");
+  setSliderVal("wi-rain-slider", "wi-rain-val", Math.max(0, +(s.rainfall_24h + off.rain).toFixed(1)), " mm");
+  setSliderVal("wi-hum-slider", "wi-hum-val", Math.max(0, +(s.humidity + (off.hum || 0))), "%");
   resetWhatIfResults();
 }
 
@@ -187,33 +188,33 @@ function updateDashboardComparison(cityKey) {
   const values = typeof getCityModelValues === "function"
     ? getCityModelValues(cityKey)
     : (() => {
-        const off = CITY_FORECAST_DATA[cityKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 };
-        const s = CLIMATE_DATA.all_india_summary;
-        return {
-          maxTemp: +(s.max_temp + off.max).toFixed(1),
-          minTemp: +(s.min_temp + (off.min||0)).toFixed(1),
-          rainfall: Math.max(0, +(s.rainfall_24h + off.rain).toFixed(1)),
-          humidity: Math.max(0, Math.min(100, s.humidity + (off.hum||0)))
-        };
-      })();
+      const off = CITY_FORECAST_DATA[cityKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 };
+      const s = CLIMATE_DATA.all_india_summary;
+      return {
+        maxTemp: +(s.max_temp + off.max).toFixed(1),
+        minTemp: +(s.min_temp + (off.min || 0)).toFixed(1),
+        rainfall: Math.max(0, +(s.rainfall_24h + off.rain).toFixed(1)),
+        humidity: Math.max(0, Math.min(100, s.humidity + (off.hum || 0)))
+      };
+    })();
 
-  const todayMax  = values.maxTemp;
-  const todayMin  = values.minTemp;
+  const todayMax = values.maxTemp;
+  const todayMin = values.minTemp;
   const todayRain = values.rainfall;
-  const todayHum  = values.humidity;
+  const todayHum = values.humidity;
 
   // Yesterday deltas
   const deltas = { max: +1.2, min: +0.6, rain: -4.3, hum: -2 };
 
-  setText("comp-max",  `${todayMax}°C`);
-  setText("comp-min",  `${todayMin}°C`);
+  setText("comp-max", `${todayMax}°C`);
+  setText("comp-min", `${todayMin}°C`);
   setText("comp-rain", `${Math.max(0, todayRain)} mm`);
-  setText("comp-hum",  `${todayHum}%`);
+  setText("comp-hum", `${todayHum}%`);
 
-  setCompDelta("comp-max-delta",  deltas.max,  "°C");
-  setCompDelta("comp-min-delta",  deltas.min,  "°C");
+  setCompDelta("comp-max-delta", deltas.max, "°C");
+  setCompDelta("comp-min-delta", deltas.min, "°C");
   setCompDelta("comp-rain-delta", deltas.rain, " mm");
-  setCompDelta("comp-hum-delta",  deltas.hum,  "%");
+  setCompDelta("comp-hum-delta", deltas.hum, "%");
 }
 
 function setCompDelta(id, delta, unit) {
@@ -227,29 +228,149 @@ function setCompDelta(id, delta, unit) {
 // ══════════════════════════════════════════
 // FORECAST PAGE
 // ══════════════════════════════════════════
-function initForecastPage() {
-  renderForecastCalendar();
-  // Select today (day 0) by default
-  if (forecastSelDay === 0) {
-    setTimeout(() => selectForecastDay(0), 50);
-  } else {
-    renderForecastDayStats(forecastSelDay);
+// ── FETCH LIVE FORECAST DATA FROM OPEN-METEO ──
+async function loadForecastData(cityKey) {
+  const sourceTag = document.getElementById("forecast-model-tag");
+  if (sourceTag) {
+    sourceTag.textContent = "Fetching Live...";
+    sourceTag.className = "model-tag loading";
   }
+
+  const container = document.getElementById("forecast-calendar");
+  if (container) {
+    container.innerHTML = `
+      <div style="grid-column: span 7; display: flex; align-items: center; justify-content: center; padding: 30px; gap: 10px; color: #8ba3c7; font-family: var(--font-primary);">
+        <i data-lucide="loader-2" class="animate-spin" style="animation: spin 1.5s linear infinite; width: 18px; height: 18px;"></i>
+        <span>Connecting to satellite feed...</span>
+      </div>
+    `;
+    lucide.createIcons();
+  }
+
+  // Get coordinates
+  const info = REGION_INFO[cityKey];
+  const lat = info ? info.lat : 22.5;
+  const lon = info ? info.lon : 82.0;
+
+  // Check cache first
+  if (forecastCache[cityKey]) {
+    activeForecastData = forecastCache[cityKey].data;
+    if (sourceTag) {
+      sourceTag.textContent = forecastCache[cityKey].source;
+      sourceTag.className = "model-tag live-badge";
+    }
+    renderForecastCalendar();
+    if (forecastSelDay >= activeForecastData.length) forecastSelDay = 0;
+    renderForecastDayStats(forecastSelDay);
+    renderForecastTempChart();
+    renderForecastRainChart();
+    return;
+  }
+
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,relative_humidity_2m_max,wind_speed_10m_max&timezone=Asia/Kolkata`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Network response error");
+    const data = await res.json();
+
+    if (!data.daily || !data.daily.time || data.daily.time.length < 7) {
+      throw new Error("Invalid forecast structure");
+    }
+
+    const fetchedData = data.daily.time.slice(0, 7).map((timeStr, i) => {
+      const d = new Date(timeStr + 'T00:00:00');
+      const maxT = data.daily.temperature_2m_max[i] ?? 30.0;
+      const minT = data.daily.temperature_2m_min[i] ?? 20.0;
+      const rain = data.daily.precipitation_sum[i] ?? 0.0;
+      const hum = data.daily.relative_humidity_2m_max[i] ?? 60;
+      const wind = data.daily.wind_speed_10m_max[i] ?? 10;
+
+      return {
+        date: d,
+        dateLabel: d.toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" }),
+        dateISO: timeStr,
+        max_temp: maxT,
+        min_temp: minT,
+        rainfall: rain,
+        humidity: hum,
+        wind_speed: wind,
+        condition: getConditionFromData(maxT, rain)
+      };
+    });
+
+    activeForecastData = fetchedData;
+    const sourceLabel = cityKey === "all" ? "Live API (India Avg)" : "Live Open-Meteo API";
+    forecastCache[cityKey] = {
+      data: fetchedData,
+      source: sourceLabel
+    };
+
+    if (sourceTag) {
+      sourceTag.textContent = sourceLabel;
+      sourceTag.className = "model-tag live-badge";
+    }
+  } catch (err) {
+    console.warn("Forecast API failed, falling back to offline model data", err);
+    // Offline fallback: Use the original static baseline offsets
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    const maxBase  = [37.4, 38.1, 39.0, 38.5, 36.8, 35.2, 34.9];
+    const minBase  = [24.8, 25.3, 26.1, 25.7, 24.0, 23.5, 23.2];
+    const rainBase = [18.2,  0.0,  2.4, 35.6, 12.0, 46.8,  8.1];
+    const humBase  = [68,    62,   58,   75,   71,   82,    65  ];
+    const windBase = [12,    18,   14,    9,   22,   28,    16  ];
+
+    const off = CITY_FORECAST_DATA[cityKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 };
+
+    activeForecastData = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      const adjMax = +(maxBase[i] + off.max).toFixed(1);
+      const adjRain = Math.max(0, +(rainBase[i] + off.rain).toFixed(1));
+      return {
+        date: d,
+        dateLabel: d.toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" }),
+        dateISO: d.toISOString().split("T")[0],
+        max_temp: adjMax,
+        min_temp: +(minBase[i] + (off.min || 0)).toFixed(1),
+        rainfall: adjRain,
+        humidity: Math.max(0, Math.min(100, humBase[i] + (off.hum || 0))),
+        wind_speed: windBase[i],
+        condition: getConditionFromData(adjMax, adjRain)
+      };
+    });
+
+    if (sourceTag) {
+      sourceTag.textContent = "Offline Baseline Model";
+      sourceTag.className = "model-tag fallback-badge";
+    }
+  }
+
+  // Trigger Renders
+  renderForecastCalendar();
+  if (forecastSelDay >= activeForecastData.length) forecastSelDay = 0;
+  renderForecastDayStats(forecastSelDay);
   renderForecastTempChart();
   renderForecastRainChart();
-  lucide.createIcons();
+}
+
+function initForecastPage() {
+  loadForecastData(forecastCityKey);
 }
 
 function renderForecastCalendar() {
   const container = document.getElementById("forecast-calendar");
   if (!container) return;
 
-  const off = CITY_FORECAST_DATA[forecastCityKey]?.offsets || { max: 0, min: 0, rain: 0 };
+  const dataSrc = activeForecastData || FORECAST_7DAY_EXTENDED;
+  // If activeForecastData exists, we do not apply city offsets because they are already baked into the live coordinates fetch.
+  const isLive = !!activeForecastData;
+  const off = isLive ? { max: 0, min: 0, rain: 0 } : (CITY_FORECAST_DATA[forecastCityKey]?.offsets || { max: 0, min: 0, rain: 0 });
 
-  container.innerHTML = FORECAST_7DAY_EXTENDED.map((day, i) => {
-    const adjMax  = +(day.max_temp + off.max).toFixed(1);
+  container.innerHTML = dataSrc.map((day, i) => {
+    const adjMax = +(day.max_temp + off.max).toFixed(1);
     const adjRain = Math.max(0, +(day.rainfall + off.rain).toFixed(1));
-    const cond    = getConditionFromData(adjMax, adjRain);
+    const cond = getConditionFromData(adjMax, adjRain);
     const isToday = i === 0;
 
     return `
@@ -259,7 +380,7 @@ function renderForecastCalendar() {
         <div class="fdc-day">${day.date.getDate()}</div>
         <div class="fdc-icon">${cond.icon}</div>
         <div class="fdc-month">${day.date.toLocaleDateString("en-IN", { month: "short" })}</div>
-        <div class="fdc-temp">${adjMax}° / ${+(day.min_temp + (off.min||0)).toFixed(1)}°</div>
+        <div class="fdc-temp">${adjMax}° / ${+(day.min_temp + (off.min || 0)).toFixed(1)}°</div>
       </div>
     `;
   }).join("");
@@ -276,36 +397,41 @@ function selectForecastDay(idx) {
   renderForecastDayStats(idx);
 
   // Update the map's forecast-date to that day
-  const dayISO = FORECAST_7DAY_EXTENDED[idx].dateISO;
-  const fdInput = document.getElementById("forecast-date");
-  if (fdInput) {
-    fdInput.value = dayISO;
-    fdInput.dispatchEvent(new Event("change"));
+  const dataSrc = activeForecastData || FORECAST_7DAY_EXTENDED;
+  if (dataSrc[idx]) {
+    const dayISO = dataSrc[idx].dateISO;
+    const fdInput = document.getElementById("forecast-date");
+    if (fdInput) {
+      fdInput.value = dayISO;
+      fdInput.dispatchEvent(new Event("change"));
+    }
   }
 }
 
 function renderForecastDayStats(idx) {
-  const day = FORECAST_7DAY_EXTENDED[idx];
+  const dataSrc = activeForecastData || FORECAST_7DAY_EXTENDED;
+  const day = dataSrc[idx];
   if (!day) return;
 
-  const off = CITY_FORECAST_DATA[forecastCityKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 };
-  const adjMax  = +(day.max_temp  + off.max).toFixed(1);
-  const adjMin  = +(day.min_temp  + (off.min||0)).toFixed(1);
+  const isLive = !!activeForecastData;
+  const off = isLive ? { max: 0, min: 0, rain: 0, hum: 0 } : (CITY_FORECAST_DATA[forecastCityKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 });
+  const adjMax = +(day.max_temp + off.max).toFixed(1);
+  const adjMin = +(day.min_temp + (off.min || 0)).toFixed(1);
   const adjRain = Math.max(0, +(day.rainfall + off.rain).toFixed(1));
-  const adjHum  = Math.max(0, Math.min(100, day.humidity + (off.hum||0)));
-  const cond    = getConditionFromData(adjMax, adjRain);
+  const adjHum = Math.max(0, Math.min(100, day.humidity + (off.hum || 0)));
+  const cond = getConditionFromData(adjMax, adjRain);
 
   // Selected header
-  setText("fc-sel-icon",  cond.icon);
+  setText("fc-sel-icon", cond.icon);
   setText("fc-sel-label", day.dateLabel);
-  setText("fc-sel-cond",  cond.label + " — " + day.date.toLocaleDateString("en-IN", { weekday: "long", month: "long", day: "numeric" }));
+  setText("fc-sel-cond", cond.label + " — " + day.date.toLocaleDateString("en-IN", { weekday: "long", month: "long", day: "numeric" }));
   setText("fc-city-desc", CITY_FORECAST_DATA[forecastCityKey]?.desc || "");
 
   // KPIs
-  setText("fc-max-val",  `${adjMax}°C`);
-  setText("fc-min-val",  `${adjMin}°C`);
+  setText("fc-max-val", `${adjMax}°C`);
+  setText("fc-min-val", `${adjMin}°C`);
   setText("fc-rain-val", `${adjRain} mm`);
-  setText("fc-hum-val",  `${adjHum}%`);
+  setText("fc-hum-val", `${adjHum}%`);
 }
 
 function renderForecastTempChart() {
@@ -313,10 +439,12 @@ function renderForecastTempChart() {
   if (!ctx) return;
   if (forecastTempChartInst) { forecastTempChartInst.destroy(); forecastTempChartInst = null; }
 
-  const off = CITY_FORECAST_DATA[forecastCityKey]?.offsets || { max: 0, min: 0, rain: 0 };
-  const labels  = FORECAST_7DAY_EXTENDED.map(d => d.dateLabel);
-  const maxData = FORECAST_7DAY_EXTENDED.map(d => +(d.max_temp + off.max).toFixed(1));
-  const minData = FORECAST_7DAY_EXTENDED.map(d => +(d.min_temp + (off.min||0)).toFixed(1));
+  const dataSrc = activeForecastData || FORECAST_7DAY_EXTENDED;
+  const isLive = !!activeForecastData;
+  const off = isLive ? { max: 0, min: 0, rain: 0 } : (CITY_FORECAST_DATA[forecastCityKey]?.offsets || { max: 0, min: 0, rain: 0 });
+  const labels = dataSrc.map(d => d.dateLabel);
+  const maxData = dataSrc.map(d => +(d.max_temp + off.max).toFixed(1));
+  const minData = dataSrc.map(d => +(d.min_temp + (off.min || 0)).toFixed(1));
 
   forecastTempChartInst = new Chart(ctx, {
     type: "line",
@@ -362,16 +490,18 @@ function renderForecastRainChart() {
   if (!ctx) return;
   if (forecastRainChartInst) { forecastRainChartInst.destroy(); forecastRainChartInst = null; }
 
-  const off = CITY_FORECAST_DATA[forecastCityKey]?.offsets || { max: 0, min: 0, rain: 0 };
-  const labels   = FORECAST_7DAY_EXTENDED.map(d => d.dateLabel);
-  const rainData = FORECAST_7DAY_EXTENDED.map(d => Math.max(0, +(d.rainfall + off.rain).toFixed(1)));
+  const dataSrc = activeForecastData || FORECAST_7DAY_EXTENDED;
+  const isLive = !!activeForecastData;
+  const off = isLive ? { max: 0, min: 0, rain: 0 } : (CITY_FORECAST_DATA[forecastCityKey]?.offsets || { max: 0, min: 0, rain: 0 });
+  const labels = dataSrc.map(d => d.dateLabel);
+  const rainData = dataSrc.map(d => Math.max(0, +(d.rainfall + off.rain).toFixed(1)));
 
   const barColors = rainData.map(v =>
-    v === 0          ? "rgba(74,96,128,0.4)" :
-    v < 10           ? "rgba(0,229,204,0.5)" :
-    v < 40           ? "rgba(0,212,255,0.65)" :
-    v < 80           ? "rgba(59,130,246,0.75)" :
-                       "rgba(124,58,237,0.85)"
+    v === 0 ? "rgba(74,96,128,0.4)" :
+      v < 10 ? "rgba(0,229,204,0.5)" :
+        v < 40 ? "rgba(0,212,255,0.65)" :
+          v < 80 ? "rgba(59,130,246,0.75)" :
+            "rgba(124,58,237,0.85)"
   );
 
   forecastRainChartInst = new Chart(ctx, {
@@ -421,11 +551,11 @@ function updateAlertStats() {
   const counts = { critical: 0, high: 0, moderate: 0, low: 0 };
   ALERTS_FULL.forEach(a => { if (counts[a.severity] !== undefined) counts[a.severity]++; });
   setText("stat-critical", counts.critical);
-  setText("stat-high",     counts.high);
+  setText("stat-high", counts.high);
   setText("stat-moderate", counts.moderate);
-  setText("stat-low",      counts.low);
+  setText("stat-low", counts.low);
   setText("nav-alerts-badge", ALERTS_FULL.filter(a => a.status === "active").length);
-  setText("alert-count",      ALERTS_FULL.filter(a => a.status === "active").length);
+  setText("alert-count", ALERTS_FULL.filter(a => a.status === "active").length);
 }
 
 function renderAlertCards() {
@@ -435,7 +565,7 @@ function renderAlertCards() {
   let alerts = ALERTS_FULL;
 
   if (alertFilterStatus !== "all") alerts = alerts.filter(a => a.status === alertFilterStatus);
-  if (alertFilterSev    !== "all") alerts = alerts.filter(a => a.severity === alertFilterSev);
+  if (alertFilterSev !== "all") alerts = alerts.filter(a => a.severity === alertFilterSev);
 
   if (alerts.length === 0) {
     container.innerHTML = `
@@ -509,7 +639,7 @@ function bindAlertFilters() {
 function updateAlertsNavBadge() {
   const active = ALERTS_FULL.filter(a => a.status === "active").length;
   setText("nav-alerts-badge", active);
-  setText("alert-count",      active);
+  setText("alert-count", active);
 }
 
 // ══════════════════════════════════════════
@@ -524,16 +654,16 @@ function initReportsPage() {
 function renderReportData(cityKey, dateISO) {
   reportCityKey = cityKey;
 
-  const off  = CITY_FORECAST_DATA[cityKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 };
-  const s    = CLIMATE_DATA.all_india_summary;
+  const off = CITY_FORECAST_DATA[cityKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 };
+  const s = CLIMATE_DATA.all_india_summary;
   const day0 = FORECAST_7DAY_EXTENDED[0];
 
-  const adjMax  = +(s.max_temp     + off.max).toFixed(1);
-  const adjMin  = +(s.min_temp     + (off.min||0)).toFixed(1);
+  const adjMax = +(s.max_temp + off.max).toFixed(1);
+  const adjMin = +(s.min_temp + (off.min || 0)).toFixed(1);
   const adjRain = Math.max(0, +(s.rainfall_24h + off.rain).toFixed(1));
-  const adjHum  = Math.max(0, Math.min(100, s.humidity + (off.hum||0)));
+  const adjHum = Math.max(0, Math.min(100, s.humidity + (off.hum || 0)));
   const adjWind = Math.max(0, day0.wind_speed + Math.round(off.max * 0.4));
-  const cond    = getConditionFromData(adjMax, adjRain);
+  const cond = getConditionFromData(adjMax, adjRain);
 
   // Header date tag
   const dateObj = dateISO ? new Date(dateISO + "T00:00:00") : new Date();
@@ -541,10 +671,10 @@ function renderReportData(cityKey, dateISO) {
   setText("report-date-tag", dateLabel);
 
   // KPIs
-  setText("rep-max-val",  `${adjMax}°C`);
-  setText("rep-min-val",  `${adjMin}°C`);
+  setText("rep-max-val", `${adjMax}°C`);
+  setText("rep-min-val", `${adjMin}°C`);
   setText("rep-rain-val", `${adjRain} mm`);
-  setText("rep-hum-val",  `${adjHum}%`);
+  setText("rep-hum-val", `${adjHum}%`);
   setText("rep-wind-val", `${adjWind} km/h`);
   setText("rep-cond-val", cond.icon + " " + cond.label);
 
@@ -616,17 +746,17 @@ function downloadReportPDF() {
     btn.disabled = true;
   }
   setTimeout(() => {
-    const dateEl  = document.getElementById("report-date-input");
+    const dateEl = document.getElementById("report-date-input");
     const dateStr = dateEl?.value || new Date().toISOString().split("T")[0];
-    const cityEl  = document.getElementById("report-city-select");
+    const cityEl = document.getElementById("report-city-select");
     const cityLbl = cityEl?.options[cityEl.selectedIndex]?.text || "All India";
 
     const off = CITY_FORECAST_DATA[reportCityKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 };
-    const s   = CLIMATE_DATA.all_india_summary;
-    const adjMax  = +(s.max_temp + off.max).toFixed(1);
-    const adjMin  = +(s.min_temp + (off.min||0)).toFixed(1);
+    const s = CLIMATE_DATA.all_india_summary;
+    const adjMax = +(s.max_temp + off.max).toFixed(1);
+    const adjMin = +(s.min_temp + (off.min || 0)).toFixed(1);
     const adjRain = Math.max(0, +(s.rainfall_24h + off.rain).toFixed(1));
-    const adjHum  = Math.max(0, Math.min(100, s.humidity + (off.hum||0)));
+    const adjHum = Math.max(0, Math.min(100, s.humidity + (off.hum || 0)));
     const summary = REPORT_SUMMARIES[reportCityKey] || REPORT_SUMMARIES["all"];
 
     const printWin = window.open("", "_blank", "width=900,height=700");
@@ -634,7 +764,7 @@ function downloadReportPDF() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>ClimaTwin India — Climate Report</title>
+        <title>RIT — Climate Report</title>
         <style>
           body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1a2744; background: #fff; }
           h1 { font-size: 26px; font-weight: 800; color: #0a2244; border-bottom: 3px solid #00d4ff; padding-bottom: 10px; }
@@ -650,7 +780,7 @@ function downloadReportPDF() {
         </style>
       </head>
       <body>
-        <h1>🛰️ ClimaTwin India — Climate Report <span class="badge">ISRO Hackathon 2025</span></h1>
+        <h1>🛰️ RIT — Climate Report <span class="badge">ISRO Hackathon 2025</span></h1>
         <div class="meta">
           <strong>Region:</strong> ${cityLbl} &nbsp;|&nbsp;
           <strong>Date:</strong> ${dateStr} &nbsp;|&nbsp;
@@ -669,7 +799,7 @@ function downloadReportPDF() {
         <div class="footer">
           Data Sources: ISRO INSAT-3D/3DR · IMD 0.25° Grid · MOSDAC · Bhuvan Geoportal &nbsp;|&nbsp;
           This report contains AI-generated mock data for demonstration purposes. &nbsp;|&nbsp;
-          ClimaTwin India v1.0 · ISRO Hackathon 2025
+          RIT v1.0 · ISRO Hackathon 2025
         </div>
         <script>window.onload = () => { window.print(); }<\/script>
       </body>
@@ -691,9 +821,9 @@ function initWhatIfPageSliders() {
   const sliders = [
     { slider: "wi-maxtemp-slider", val: "wi-maxtemp-val", suffix: "°C" },
     { slider: "wi-mintemp-slider", val: "wi-mintemp-val", suffix: "°C" },
-    { slider: "wi-rain-slider",    val: "wi-rain-val",    suffix: " mm" },
-    { slider: "wi-hum-slider",     val: "wi-hum-val",     suffix: "%" },
-    { slider: "co2-slider",        val: "co2-slider-val", suffix: " ppm" }
+    { slider: "wi-rain-slider", val: "wi-rain-val", suffix: " mm" },
+    { slider: "wi-hum-slider", val: "wi-hum-val", suffix: "%" },
+    { slider: "co2-slider", val: "co2-slider-val", suffix: " ppm" }
   ];
 
   sliders.forEach(({ slider, val, suffix }) => {
@@ -749,20 +879,20 @@ function runSimulation() {
 }
 
 function computeWhatIfAbsolute(maxTemp, minTemp, rainfall, humidity, co2) {
-  const baseMax  = CLIMATE_DATA.all_india_summary.max_temp;
-  const baseMin  = CLIMATE_DATA.all_india_summary.min_temp;
+  const baseMax = CLIMATE_DATA.all_india_summary.max_temp;
+  const baseMin = CLIMATE_DATA.all_india_summary.min_temp;
   const baseRain = CLIMATE_DATA.all_india_summary.rainfall_24h;
 
   const dT = +(maxTemp - baseMax).toFixed(1);
   const dR = rainfall > 0 ? Math.round(((rainfall - baseRain) / baseRain) * 100) : -100;
 
   const heatwaveDays = maxTemp > 40 ? Math.round((maxTemp - 40) * 1.8) : 0;
-  const floodRisk    = rainfall > 80 ? "High" : rainfall > 40 ? "Moderate" : "Low";
-  const droughtRisk  = rainfall < 5  ? "High" : rainfall < 15 ? "Moderate" : "Low";
-  const agriRisk     = maxTemp > 42 || rainfall > 80 || rainfall < 5 ? "High" : maxTemp > 38 ? "Moderate" : "Low";
-  const waterStress  = maxTemp > 38 && rainfall < 20 ? Math.round((maxTemp - 38) * 4 + (20 - rainfall) * 0.5) : 0;
-  const co2Effect    = co2 > 450 ? `+${((co2 - 420) * 0.012).toFixed(2)}°C radiative forcing` : "Baseline (420 ppm)";
-  const heatIndex    = +(maxTemp + (humidity - 40) * 0.05).toFixed(1);
+  const floodRisk = rainfall > 80 ? "High" : rainfall > 40 ? "Moderate" : "Low";
+  const droughtRisk = rainfall < 5 ? "High" : rainfall < 15 ? "Moderate" : "Low";
+  const agriRisk = maxTemp > 42 || rainfall > 80 || rainfall < 5 ? "High" : maxTemp > 38 ? "Moderate" : "Low";
+  const waterStress = maxTemp > 38 && rainfall < 20 ? Math.round((maxTemp - 38) * 4 + (20 - rainfall) * 0.5) : 0;
+  const co2Effect = co2 > 450 ? `+${((co2 - 420) * 0.012).toFixed(2)}°C radiative forcing` : "Baseline (420 ppm)";
+  const heatIndex = +(maxTemp + (humidity - 40) * 0.05).toFixed(1);
 
   return {
     scenario: `Max ${maxTemp}°C · Min ${minTemp}°C · Rain ${rainfall}mm · Hum ${humidity}%`,
@@ -794,8 +924,8 @@ function displayWhatIfResults(result, maxTemp, minTemp, rainfall, humidity, co2)
 
   const trendArrow = (orig, proj) => {
     const diff = +(proj - orig).toFixed(1);
-    const cls  = diff > 0 ? "positive" : diff < 0 ? "negative" : "neutral";
-    const sym  = diff > 0 ? "▲" : diff < 0 ? "▼" : "─";
+    const cls = diff > 0 ? "positive" : diff < 0 ? "negative" : "neutral";
+    const sym = diff > 0 ? "▲" : diff < 0 ? "▼" : "─";
     return `<span class="${cls}">${sym} ${diff >= 0 ? "+" : ""}${diff}</span>`;
   };
 
@@ -889,21 +1019,21 @@ function renderWhatIfChart(maxTemp, minTemp, rainfall) {
   if (whatifChartInst) { whatifChartInst.destroy(); whatifChartInst = null; }
 
   // Show comparison: baseline 7-day vs simulated 7-day
-  const labels   = FORECAST_7DAY_EXTENDED.map(d => d.dateLabel);
-  const baseMax  = FORECAST_7DAY_EXTENDED.map(d => d.max_temp);
-  const simMax   = FORECAST_7DAY_EXTENDED.map(d => {
+  const labels = FORECAST_7DAY_EXTENDED.map(d => d.dateLabel);
+  const baseMax = FORECAST_7DAY_EXTENDED.map(d => d.max_temp);
+  const simMax = FORECAST_7DAY_EXTENDED.map(d => {
     const delta = maxTemp - CLIMATE_DATA.all_india_summary.max_temp;
     return +(d.max_temp + delta).toFixed(1);
   });
-  const simRain  = FORECAST_7DAY_EXTENDED.map(d => Math.max(0, +(d.rainfall * (rainfall / Math.max(1, CLIMATE_DATA.all_india_summary.rainfall_24h))).toFixed(1)));
+  const simRain = FORECAST_7DAY_EXTENDED.map(d => Math.max(0, +(d.rainfall * (rainfall / Math.max(1, CLIMATE_DATA.all_india_summary.rainfall_24h))).toFixed(1)));
 
   whatifChartInst = new Chart(ctx, {
     data: {
       labels,
       datasets: [
-        { type: "line", label: "Baseline Max (°C)", data: baseMax, borderColor: "#4a6080", backgroundColor: "transparent", borderDash: [4,3], pointRadius: 2, borderWidth: 1.5, tension: 0.4, yAxisID: "yT" },
+        { type: "line", label: "Baseline Max (°C)", data: baseMax, borderColor: "#4a6080", backgroundColor: "transparent", borderDash: [4, 3], pointRadius: 2, borderWidth: 1.5, tension: 0.4, yAxisID: "yT" },
         { type: "line", label: "Simulated Max (°C)", data: simMax, borderColor: "#ff6b6b", backgroundColor: "rgba(255,107,107,0.08)", pointBackgroundColor: "#ff6b6b", pointRadius: 3, borderWidth: 2, tension: 0.4, fill: true, yAxisID: "yT" },
-        { type: "bar",  label: "Simulated Rain (mm)", data: simRain, backgroundColor: "rgba(0,212,255,0.4)", borderRadius: 4, yAxisID: "yR" }
+        { type: "bar", label: "Simulated Rain (mm)", data: simRain, backgroundColor: "rgba(0,212,255,0.4)", borderRadius: 4, yAxisID: "yR" }
       ]
     },
     options: {
@@ -913,8 +1043,8 @@ function renderWhatIfChart(maxTemp, minTemp, rainfall) {
         tooltip: { backgroundColor: "#111c35", borderColor: "rgba(0,212,255,0.25)", borderWidth: 1, titleColor: "#00d4ff", bodyColor: "#e8f4ff", padding: 10, cornerRadius: 8 }
       },
       scales: {
-        x:  { ticks: { color: "#8ba3c7", font: { size: 10 } }, grid: { color: "rgba(0,212,255,0.05)" } },
-        yT: { position: "left",  ticks: { color: "#8ba3c7", font: { size: 10 } }, grid: { color: "rgba(0,212,255,0.05)" }, title: { display: true, text: "Temp (°C)", color: "#4a6080", font: { size: 9 } } },
+        x: { ticks: { color: "#8ba3c7", font: { size: 10 } }, grid: { color: "rgba(0,212,255,0.05)" } },
+        yT: { position: "left", ticks: { color: "#8ba3c7", font: { size: 10 } }, grid: { color: "rgba(0,212,255,0.05)" }, title: { display: true, text: "Temp (°C)", color: "#4a6080", font: { size: 9 } } },
         yR: { position: "right", ticks: { color: "#8ba3c7", font: { size: 10 } }, grid: { drawOnChartArea: false }, title: { display: true, text: "Rain (mm)", color: "#4a6080", font: { size: 9 } } }
       }
     }

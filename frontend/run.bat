@@ -1,6 +1,6 @@
 @echo off
 echo ================================================
-echo   ClimaTwin India — Local Dev Server
+echo   RIT — Local Dev Server
 echo ================================================
 echo.
 echo Starting server at http://localhost:8765...

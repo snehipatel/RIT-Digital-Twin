@@ -1,12 +1,12 @@
-# 🌍 ClimaTwin INDIA: High-Resolution Climate Digital Twin & AI Forecasting Engine
+# 🌍 RIT: High-Resolution Climate Digital Twin & AI Forecasting Engine
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![LightGBM](https://img.shields.io/badge/Model-LightGBM%20%7C%20XGBoost-orange.svg)](https://lightgbm.readthedocs.io/)
 [![Dataset](https://img.shields.io/badge/Dataset-IMD%2075--Year%20Gridded%20Data-green.svg)](https://imdpune.gov.in/)
-[![Web Dashboard](https://img.shields.io/badge/Dashboard-ClimaTwin%20INDIA-cyan.svg)](http://localhost:8765)
+[![Web Dashboard](https://img.shields.io/badge/Dashboard-RIT%20INDIA-cyan.svg)](http://localhost:8765)
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
-**ClimaTwin INDIA** is an end-to-end Machine Learning Framework and Interactive Web Application for high-resolution daily meteorological predictions across India ($0.25^\circ \times 0.25^\circ$ IMD grid).
+**RIT** is an end-to-end Machine Learning Framework and Interactive Web Application for high-resolution daily meteorological predictions across India ($0.25^\circ \times 0.25^\circ$ IMD grid).
 
 The system integrates 75 years of historical observational data, oceanic climate drivers (NOAA ONI & IOD DMI), topographic DEM elevations, ancient Indian Astro-Meteorological indicators (*Bhadali Subhashitas*), real-world satellite observations (INSAT-3D LST), and an active web interface.
 
@@ -48,7 +48,7 @@ The system integrates 75 years of historical observational data, oceanic climate
                                                       │
                                                       ▼
                                    ┌─────────────────────────────────────┐
-                                   │   ClimaTwin INDIA Web Dashboard     │
+                                   │   RIT Web Dashboard     │
                                    └─────────────────────────────────────┘
 ```
 
@@ -193,7 +193,7 @@ Open **[http://localhost:8765](http://localhost:8765)** in your browser.
 
 ```text
 RIT-Digital-Twin/
-├── frontend/                        # ClimaTwin INDIA Web Dashboard
+├── frontend/                        # RIT Web Dashboard
 │   ├── index.html                   # Core Application UI Layout
 │   ├── styles.css                   # Dark-mode Glassmorphism CSS Design Tokens
 │   ├── app.js                       # Main Application Controller & Bootstram

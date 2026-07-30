@@ -328,7 +328,7 @@ function initMap() {
 
   // Dark base tiles — no labels (labels come from separate layer on top)
   L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", {
-    attribution: "© OpenStreetMap | © CartoDB | ISRO ClimaTwin",
+    attribution: "© OpenStreetMap | © CartoDB | ISRO RIT",
     subdomains: "abcd", maxZoom: 19,
   }).addTo(map);
 
@@ -602,27 +602,27 @@ function paintCloud(ctx, cx, cy, s, storm) {
   // No alpha fade-to-zero edges → defined cloud boundary, not cotton.
   ctx.beginPath();
   // Base layer — wide flat body
-  ctx.arc(cx,          cy + s * 0.08,  s * 0.44, 0, Math.PI * 2);
-  ctx.arc(cx - s*0.40, cy + s * 0.12,  s * 0.30, 0, Math.PI * 2);
-  ctx.arc(cx + s*0.40, cy + s * 0.12,  s * 0.30, 0, Math.PI * 2);
+  ctx.arc(cx, cy + s * 0.08, s * 0.44, 0, Math.PI * 2);
+  ctx.arc(cx - s * 0.40, cy + s * 0.12, s * 0.30, 0, Math.PI * 2);
+  ctx.arc(cx + s * 0.40, cy + s * 0.12, s * 0.30, 0, Math.PI * 2);
   // Top bumps — give the classic cumulus silhouette
-  ctx.arc(cx - s*0.16, cy - s * 0.18,  s * 0.34, 0, Math.PI * 2);
-  ctx.arc(cx + s*0.22, cy - s * 0.24,  s * 0.30, 0, Math.PI * 2);
+  ctx.arc(cx - s * 0.16, cy - s * 0.18, s * 0.34, 0, Math.PI * 2);
+  ctx.arc(cx + s * 0.22, cy - s * 0.24, s * 0.30, 0, Math.PI * 2);
   // Top-left shoulder
-  ctx.arc(cx - s*0.42, cy - s * 0.06,  s * 0.23, 0, Math.PI * 2);
+  ctx.arc(cx - s * 0.42, cy - s * 0.06, s * 0.23, 0, Math.PI * 2);
 
   // One linear gradient top→bottom for the whole cloud
   const g = ctx.createLinearGradient(cx, cy - s * 0.6, cx, cy + s * 0.5);
   if (storm) {
-    g.addColorStop(0,    "rgba(195,200,225,0.96)");
+    g.addColorStop(0, "rgba(195,200,225,0.96)");
     g.addColorStop(0.40, "rgba(140,150,195,0.94)");
     g.addColorStop(0.80, "rgba(100,112,168,0.90)");
-    g.addColorStop(1,    "rgba(75, 88, 148,0.88)");
+    g.addColorStop(1, "rgba(75, 88, 148,0.88)");
   } else {
-    g.addColorStop(0,    "rgba(255,255,255,0.97)");
+    g.addColorStop(0, "rgba(255,255,255,0.97)");
     g.addColorStop(0.40, "rgba(242,248,255,0.95)");
     g.addColorStop(0.80, "rgba(220,236,252,0.90)");
-    g.addColorStop(1,    "rgba(195,218,245,0.85)");
+    g.addColorStop(1, "rgba(195,218,245,0.85)");
   }
   ctx.fillStyle = g;
   ctx.fill();
