@@ -679,7 +679,8 @@ function drawCloudSprites(ctx, dt, now) {
   const zf = _cachedZoomFactor;
   const time = now * 0.001;
 
-  clouds.forEach(c => {
+  if (showCloudsOnMap) {
+    clouds.forEach(c => {
     c.dLon += c.speedLon * dt;
     c.dLat += c.speedLat * dt;
 
@@ -713,7 +714,42 @@ function drawCloudSprites(ctx, dt, now) {
     ctx.filter = "none";
     ctx.restore();
   });
+  } // end if (showCloudsOnMap)
   ctx.globalAlpha = 1;
+}
+
+let showCloudsOnMap = true;
+function toggleMapClouds(enabled) {
+  showCloudsOnMap = enabled;
+  if (!enabled && wxCtx && wxCanvas) {
+    wxCtx.clearRect(0, 0, wxCanvas.width, wxCanvas.height);
+  }
+}
+
+function toggleMapCloudsBtn() {
+  const cb = document.getElementById("cloud-toggle-checkbox");
+  const newState = !showCloudsOnMap;
+  if (cb) cb.checked = newState;
+  toggleMapClouds(newState);
+
+  const btn = document.getElementById("btn-toggle-clouds");
+  if (btn) {
+    btn.classList.toggle("active", newState);
+  }
+}
+
+function toggleMapHUD() {
+  const huds = document.querySelectorAll(".map-hud");
+  const btn = document.getElementById("btn-toggle-hud");
+  let isHidden = false;
+  huds.forEach(hud => {
+    hud.classList.toggle("hud-hidden");
+    if (hud.classList.contains("hud-hidden")) isHidden = true;
+  });
+  if (btn) {
+    btn.classList.toggle("active", !isHidden);
+    btn.title = isHidden ? "Show Map HUD Controls" : "Hide Map HUD Controls";
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -746,8 +782,14 @@ function updateLegend(scale) {
 }
 
 function flyToRegion(regionKey) {
-  const r = REGION_INFO[regionKey] || REGION_INFO["all"];
-  map.flyTo([r.lat, r.lon], r.zoom, { animate: true, duration: 1.2 });
+  const city = (typeof MASTER_CITIES !== "undefined" && MASTER_CITIES[regionKey])
+    ? MASTER_CITIES[regionKey]
+    : (REGION_INFO[regionKey] || REGION_INFO["all"]);
+
+  if (city) {
+    const zoomLevel = regionKey === "all" ? 5 : 8;
+    map.flyTo([city.lat, city.lon], zoomLevel, { animate: true, duration: 1.2 });
+  }
 }
 
 function updateChartsForRegion(regionKey) {

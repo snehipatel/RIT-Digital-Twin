@@ -128,7 +128,13 @@
       <div class="map-panel glass-card">
         <div class="panel-header">
           <span class="panel-title"><i data-lucide="map" size="16"></i> India Climate Map</span>
-          <div class="panel-controls">
+          <div class="panel-controls" style="display:flex; align-items:center; gap:8px;">
+            <button class="map-toggle-btn active" id="btn-toggle-clouds" onclick="toggleMapCloudsBtn()" title="Toggle Satellite Clouds">
+              ☁️ Clouds
+            </button>
+            <button class="map-toggle-btn active" id="btn-toggle-hud" onclick="toggleMapHUD()" title="Toggle Map HUD Controls">
+              🎛️ HUD
+            </button>
             <span class="model-tag" id="map-mode-tag">Dashboard Mode</span>
             <span class="resolution-tag">0.25° × 0.25° Grid</span>
           </div>
@@ -142,15 +148,7 @@
             <div class="hud-section">
               <label class="hud-label">PILOT REGION</label>
               <select class="select-input map-city-select" id="region-select">
-                <option value="all">All India</option>
-                <option value="ahmedabad">Ahmedabad, Gujarat</option>
-                <option value="delhi">New Delhi</option>
-                <option value="mumbai">Mumbai, Maharashtra</option>
-                <option value="chennai">Chennai, Tamil Nadu</option>
-                <option value="kolkata">Kolkata, West Bengal</option>
-                <option value="bengaluru">Bengaluru, Karnataka</option>
-                <option value="jaipur">Jaipur, Rajasthan</option>
-                <option value="bhubaneswar">Bhubaneswar, Odisha</option>
+                <!-- Dynamically populated by MASTER_CITIES -->
               </select>
             </div>
 
@@ -171,6 +169,19 @@
                 <button class="layer-btn" data-layer="rainfall" id="layer-rainfall">
                   <span class="layer-dot" style="background:#00e5cc"></span>Rainfall
                 </button>
+              </div>
+            </div>
+
+            <div class="hud-section">
+              <label class="hud-label" style="color:#00d4ff;">SATELLITE OVERLAYS</label>
+              <div class="cloud-toggle-wrap" onclick="toggleMapCloudsBtn()" style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:rgba(17,28,53,0.85); border:1.5px solid rgba(0,212,255,0.35); border-radius:8px; cursor:pointer;">
+                <span style="font-size:12px; font-weight:600; color:#e8f4ff; display:flex; align-items:center; gap:6px;">
+                  ☁️ Satellite Clouds
+                </span>
+                <label class="toggle-switch" style="position:relative; display:inline-block; width:36px; height:20px; flex-shrink:0; pointer-events:none;">
+                  <input type="checkbox" id="cloud-toggle-checkbox" checked style="opacity:0; width:0; height:0;">
+                  <span class="toggle-slider"></span>
+                </label>
               </div>
             </div>
           </div>
@@ -1381,32 +1392,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Team -->
-        <div class="about-card glass-card">
-          <div class="panel-header">
-            <span class="panel-title"><i data-lucide="users" size="16"></i> Project Team</span>
-            <span class="model-tag">ISRO Hackathon 2026</span>
-          </div>
-          <div class="team-grid">
-            <div class="team-member">
-              <div class="team-avatar" style="background:linear-gradient(135deg,#00d4ff,#7c3aed)">S</div>
-              <div class="team-name">Snehi Patel</div>
-              <div class="team-role">ML Engineer · LightGBM & XGBoost Models</div>
-            </div>
-            <div class="team-member">
-              <div class="team-avatar" style="background:linear-gradient(135deg,#10b981,#00d4ff)">J</div>
-              <div class="team-name">Juhi Vanjara</div>
-              <div class="team-role">ML Engineer · LSTM Time-Series & Data Fusion</div>
-            </div>
-            <div class="team-member">
-              <div class="team-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">Y</div>
-              <div class="team-name">Yashvi Sanghvi</div>
-              <div class="team-role">Frontend · Leaflet Maps, Chart.js, UI/UX</div>
-            </div>
-          </div>
-        </div>
-
       </div><!-- /page-about -->
 
     </div><!-- /content-col -->

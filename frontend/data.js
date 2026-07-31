@@ -323,45 +323,57 @@ const FORECAST_7DAY_EXTENDED = (() => {
   });
 })();
 
-// ── CITY-SPECIFIC FORECAST DATA ──
-const CITY_FORECAST_DATA = {
-  all: {
-    offsets: { max: 0, min: 0, rain: 0, hum: 0 },
-    desc: "All-India average conditions"
-  },
-  ahmedabad: {
-    offsets: { max: 4, min: 2, rain: -5, hum: -8 },
-    desc: "Extremely hot, dry conditions — heat wave risk"
-  },
-  delhi: {
-    offsets: { max: 5, min: 3, rain: -8, hum: -5 },
-    desc: "Severe heat wave, poor air quality expected"
-  },
-  mumbai: {
-    offsets: { max: -2, min: -1, rain: 15, hum: 12 },
-    desc: "Monsoon active — coastal heavy rainfall expected"
-  },
-  chennai: {
-    offsets: { max: -1, min: -2, rain: 5, hum: 8 },
-    desc: "Partly cloudy with isolated showers inland"
-  },
-  kolkata: {
-    offsets: { max: 1, min: 1, rain: 12, hum: 10 },
-    desc: "Pre-monsoon showers, high humidity and mugginess"
-  },
-  bengaluru: {
-    offsets: { max: -4, min: -3, rain: 8, hum: 6 },
-    desc: "Pleasant with afternoon thundershowers"
-  },
-  jaipur: {
-    offsets: { max: 7, min: 4, rain: -10, hum: -12 },
-    desc: "Extreme heat wave — Red Alert issued by IMD"
-  },
-  bhubaneswar: {
-    offsets: { max: 2, min: 0, rain: 20, hum: 15 },
-    desc: "Cyclone watch active — heavy coastal rainfall"
-  }
+// ── MASTER CITIES & REGIONAL COORDINATES REGISTRY (MAPPED FROM LAT_LON_MAPPED_TABLE) ──
+const MASTER_CITIES = {
+  all:           { name: "All India (Average)",                  state: "All India",        lat: 20.59, lon: 78.96, offsets: { max: 0.0,  min: 0.0,   rain: 0.0,   hum: 0  }, desc: "All-India regional average climate conditions" },
+  ahmedabad:     { name: "Ahmedabad, Gujarat",                  state: "Gujarat",          lat: 23.03, lon: 72.58, offsets: { max: -5.0, min: 0.5,   rain: 8.0,   hum: -5 }, desc: "Western plains — warm to hot with convective showers" },
+  delhi:         { name: "New Delhi, NCR",                      state: "NCT of Delhi",     lat: 28.61, lon: 77.21, offsets: { max: 3.0,  min: 1.5,   rain: -5.0,  hum: -8 }, desc: "Northern plains — hot dry conditions and heat wave risk" },
+  mumbai:        { name: "Mumbai, Maharashtra",                 state: "Maharashtra",      lat: 19.08, lon: 72.88, offsets: { max: -8.0, min: 0.0,   rain: 55.0,  hum: 15 }, desc: "Konkan coast — active southwest monsoon precipitation" },
+  chennai:       { name: "Chennai, Tamil Nadu",                 state: "Tamil Nadu",       lat: 13.08, lon: 80.27, offsets: { max: -3.0, min: 1.0,   rain: 15.0,  hum: 10 }, desc: "Coromandel coast — warm and humid with coastal showers" },
+  kolkata:       { name: "Kolkata, West Bengal",                state: "West Bengal",      lat: 22.57, lon: 88.36, offsets: { max: -4.0, min: 0.5,   rain: 35.0,  hum: 12 }, desc: "Gangetic delta — humid with frequent thundershowers" },
+  bengaluru:     { name: "Bengaluru, Karnataka",                state: "Karnataka",        lat: 12.97, lon: 77.59, offsets: { max: -7.0, min: -3.0,  rain: 22.0,  hum: 5  }, desc: "Deccan plateau — pleasant with afternoon thundershowers" },
+  jaipur:        { name: "Jaipur, Rajasthan",                   state: "Rajasthan",        lat: 26.91, lon: 75.79, offsets: { max: 4.0,  min: 1.0,   rain: -15.0, hum: -12}, desc: "Arid northwest — severe heat wave conditions" },
+  bhubaneswar:   { name: "Bhubaneswar, Odisha",                 state: "Odisha",           lat: 20.30, lon: 85.85, offsets: { max: -5.0, min: 0.0,   rain: 45.0,  hum: 14 }, desc: "Eastern coast — active monsoon depression & coastal rain" },
+  srinagar:      { name: "Srinagar, Jammu & Kashmir",           state: "Jammu & Kashmir",  lat: 34.08, lon: 74.79, offsets: { max: -16.0,min: -16.0, rain: -10.0, hum: -15}, desc: "Kashmir valley — cold wave conditions and valley frost" },
+  shimla:        { name: "Shimla, Himachal Pradesh",            state: "Himachal Pradesh", lat: 31.10, lon: 77.17, offsets: { max: -12.0,min: -12.0, rain: 15.0,  hum: -5 }, desc: "Himalayan foothills — cool, pleasant with mountain showers" },
+  dehradun:      { name: "Dehradun, Uttarakhand",              state: "Uttarakhand",      lat: 30.31, lon: 78.03, offsets: { max: -8.0, min: -8.0,  rain: 25.0,  hum: 0  }, desc: "Doon valley — moderate temperatures with heavy rain risk" },
+  amritsar:      { name: "Amritsar / Ludhiana, Punjab",         state: "Punjab",           lat: 31.63, lon: 74.87, offsets: { max: 2.0,  min: 1.0,   rain: -8.0,  hum: -10}, desc: "Punjab plains — hot summer transitioning to monsoon" },
+  gurugram:      { name: "Gurugram / Ambala, Haryana",          state: "Haryana",          lat: 28.45, lon: 77.02, offsets: { max: 2.5,  min: 1.2,   rain: -6.0,  hum: -8 }, desc: "NCR boundary — warm to hot conditions" },
+  lucknow:       { name: "Lucknow, Uttar Pradesh",              state: "Uttar Pradesh",    lat: 26.84, lon: 80.94, offsets: { max: 1.0,  min: 0.5,   rain: 12.0,  hum: 2  }, desc: "Central UP plains — warm with pre-monsoon showers" },
+  patna:         { name: "Patna, Bihar",                        state: "Bihar",            lat: 25.59, lon: 85.13, offsets: { max: 0.0,  min: 0.0,   rain: 20.0,  hum: 5  }, desc: "Gangetic plains — warm and humid with active rain" },
+  ranchi:        { name: "Ranchi, Jharkhand",                   state: "Jharkhand",        lat: 23.34, lon: 85.30, offsets: { max: -2.0, min: -1.0,  rain: 28.0,  hum: 8  }, desc: "Chota Nagpur plateau — pleasant climate with rainfall" },
+  bhopal:        { name: "Bhopal, Madhya Pradesh",              state: "Madhya Pradesh",   lat: 23.25, lon: 77.41, offsets: { max: 1.5,  min: 0.5,   rain: 5.0,   hum: -2 }, desc: "Central plateau — warm weather with scattered rain" },
+  raipur:        { name: "Raipur, Chhattisgarh",                state: "Chhattisgarh",     lat: 21.25, lon: 81.62, offsets: { max: -1.0, min: -0.5,  rain: 30.0,  hum: 10 }, desc: "Mahanadi basin — active monsoon rainfall" },
+  guwahati:      { name: "Guwahati, Assam",                     state: "Assam",            lat: 26.14, lon: 91.73, offsets: { max: -7.0, min: -3.0,  rain: 85.0,  hum: 20 }, desc: "Brahmaputra valley — heavy torrential monsoon rain" },
+  shillong:      { name: "Shillong, Meghalaya",                 state: "Meghalaya",        lat: 25.57, lon: 91.88, offsets: { max: -12.0,min: -6.0,  rain: 95.0,  hum: 22 }, desc: "Khasi hills — extreme precipitation and cool climate" },
+  kohima:        { name: "Kohima, Nagaland",                    state: "Nagaland",         lat: 25.67, lon: 94.11, offsets: { max: -10.0,min: -5.0,  rain: 70.0,  hum: 18 }, desc: "Naga hills — high rainfall and cool weather" },
+  imphal:        { name: "Imphal, Manipur",                     state: "Manipur",          lat: 24.81, lon: 93.94, offsets: { max: -9.0, min: -4.0,  rain: 65.0,  hum: 16 }, desc: "Imphal valley — moderate temperatures with heavy rain" },
+  aizawl:        { name: "Aizawl, Mizoram",                     state: "Mizoram",          lat: 23.73, lon: 92.72, offsets: { max: -9.0, min: -4.0,  rain: 68.0,  hum: 17 }, desc: "Mizo hills — heavy monsoon rainfall" },
+  agartala:      { name: "Agartala, Tripura",                   state: "Tripura",          lat: 23.83, lon: 91.28, offsets: { max: -5.0, min: -1.0,  rain: 60.0,  hum: 15 }, desc: "Tripura plains — warm and humid with active showers" },
+  itanagar:      { name: "Itanagar, Arunachal Pradesh",         state: "Arunachal Pradesh",lat: 27.08, lon: 93.60, offsets: { max: -11.0,min: -5.0,  rain: 75.0,  hum: 18 }, desc: "Eastern Himalayas — cool with heavy precipitation" },
+  gangtok:       { name: "Gangtok, Sikkim",                     state: "Sikkim",           lat: 27.33, lon: 88.61, offsets: { max: -14.0,min: -8.0,  rain: 60.0,  hum: 12 }, desc: "Sikkim Himalayas — cold wave and high rainfall" },
+  panaji:        { name: "Panaji, Goa",                         state: "Goa",              lat: 15.49, lon: 73.82, offsets: { max: -7.0, min: -1.0,  rain: 65.0,  hum: 16 }, desc: "Goa coast — torrential monsoon downpours" },
+  kochi:         { name: "Kochi / Thiruvananthapuram, Kerala",  state: "Kerala",           lat: 9.93,  lon: 76.26, offsets: { max: -9.0, min: -2.0,  rain: 75.0,  hum: 18 }, desc: "Malabar coast — heavy monsoon rainfall" },
+  visakhapatnam: { name: "Visakhapatnam, Andhra Pradesh",       state: "Andhra Pradesh",   lat: 17.68, lon: 83.21, offsets: { max: 1.0,  min: 0.0,   rain: 18.0,  hum: 10 }, desc: "Northern Andhra coast — warm and humid" },
+  hyderabad:     { name: "Hyderabad, Telangana",                state: "Telangana",        lat: 17.38, lon: 78.48, offsets: { max: 2.0,  min: 0.5,   rain: 8.0,   hum: 0  }, desc: "Telangana plateau — warm conditions with scattered showers" },
+  puducherry:    { name: "Puducherry UT",                       state: "Puducherry",       lat: 11.94, lon: 79.81, offsets: { max: -2.0, min: 0.0,   rain: 20.0,  hum: 12 }, desc: "Coastal UT — warm and humid weather" },
+  chandigarh:    { name: "Chandigarh UT",                       state: "Chandigarh",       lat: 30.73, lon: 76.78, offsets: { max: 2.0,  min: 1.0,   rain: -5.0,  hum: -8 }, desc: "Shivalik foothills — warm summer with pre-monsoon rain" },
+  portblair:     { name: "Port Blair, Andaman & Nicobar",       state: "Andaman & Nicobar",lat: 11.62, lon: 92.72, offsets: { max: -6.0, min: -1.0,  rain: 68.0,  hum: 16 }, desc: "Bay of Bengal Islands — tropical marine monsoon" },
+  kavaratti:     { name: "Kavaratti, Lakshadweep",              state: "Lakshadweep",      lat: 10.56, lon: 72.64, offsets: { max: -7.0, min: -1.0,  rain: 74.0,  hum: 18 }, desc: "Arabian Sea Atolls — tropical island rainfall" },
+  surat:         { name: "Surat, Gujarat",                      state: "Gujarat",          lat: 21.17, lon: 72.83, offsets: { max: -4.0, min: 0.0,   rain: 25.0,  hum: 8  }, desc: "South Gujarat coast — humid with active rain" },
+  pune:          { name: "Pune, Maharashtra",                   state: "Maharashtra",      lat: 18.52, lon: 73.85, offsets: { max: -6.0, min: -2.0,  rain: 30.0,  hum: 6  }, desc: "Sahyadri eastern slopes — pleasant monsoon weather" },
+  nagpur:        { name: "Nagpur, Maharashtra",                 state: "Maharashtra",      lat: 21.14, lon: 79.08, offsets: { max: 1.0,  min: 0.5,   rain: 15.0,  hum: 2  }, desc: "Vidarbha region — warm climate with pre-monsoon showers" },
+  indore:        { name: "Indore, Madhya Pradesh",              state: "Madhya Pradesh",   lat: 22.71, lon: 75.85, offsets: { max: 0.0,  min: 0.0,   rain: 8.0,   hum: 0  }, desc: "Malwa plateau — pleasant climate" },
+  agra:          { name: "Agra, Uttar Pradesh",                 state: "Uttar Pradesh",    lat: 27.17, lon: 78.00, offsets: { max: 3.0,  min: 1.5,   rain: -4.0,  hum: -6 }, desc: "Yamuna basin — hot summer conditions" },
+  varanasi:      { name: "Varanasi, Uttar Pradesh",             state: "Uttar Pradesh",    lat: 25.31, lon: 82.97, offsets: { max: 1.5,  min: 0.5,   rain: 15.0,  hum: 4  }, desc: "Purvanchal region — warm and humid" },
+  jaisalmer:     { name: "Jaisalmer, Rajasthan",                state: "Rajasthan",        lat: 26.91, lon: 70.90, offsets: { max: 6.0,  min: 2.0,   rain: -18.0, hum: -15}, desc: "Thar desert — extreme heat wave and dry weather" },
+  jodhpur:       { name: "Jodhpur, Rajasthan",                  state: "Rajasthan",        lat: 26.23, lon: 73.02, offsets: { max: 5.0,  min: 1.8,   rain: -14.0, hum: -12}, desc: "Marwar region — intense heat wave conditions" },
+  coimbatore:    { name: "Coimbatore, Tamil Nadu",              state: "Tamil Nadu",       lat: 11.01, lon: 76.95, offsets: { max: -5.0, min: -2.0,  rain: 18.0,  hum: 4  }, desc: "Kongu region — pleasant elevated weather" },
+  madurai:       { name: "Madurai, Tamil Nadu",                 state: "Tamil Nadu",       lat: 9.92,  lon: 78.11, offsets: { max: -1.0, min: 0.5,   rain: 12.0,  hum: 6  }, desc: "Southern Tamil Nadu plains — warm climate" }
 };
+
+// ── CITY-SPECIFIC FORECAST DATA ──
+const CITY_FORECAST_DATA = MASTER_CITIES;
 
 // ── FULL ALERTS DATA WITH DO'S & DON'TS ──
 const ALERTS_FULL = [

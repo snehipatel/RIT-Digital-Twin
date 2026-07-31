@@ -240,6 +240,13 @@ let whatifChartInst = null;
 // NAVIGATION
 // ══════════════════════════════════════════
 function initNavigation() {
+  // Populate all city dropdowns with full LAT_LON_MAPPED_TABLE registry
+  populateAllCityDropdowns();
+
+  // Wire live search inputs for both Topnav Global search and HUD city search
+  wireCitySearch("global-city-search", "region-select");
+  wireCitySearch("hud-city-search", "region-select");
+
   document.querySelectorAll(".nav-link").forEach(btn => {
     btn.addEventListener("click", () => {
       const page = btn.dataset.page;
@@ -335,10 +342,177 @@ function showPage(name) {
 }
 
 // ══════════════════════════════════════════
-// CITY SELECT WIRING
+// CITY SELECT WIRING & DYNAMIC POPULATION
 // ══════════════════════════════════════════
+function populateAllCityDropdowns() {
+  const citySelectIds = [
+    "region-select",
+    "dashboard-city-select",
+    "forecast-city-select",
+    "whatif-city-select",
+    "report-city-select",
+    "prediction-city-select"
+  ];
+
+  if (typeof MASTER_CITIES === "undefined" || !MASTER_CITIES) return;
+
+  citySelectIds.forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
+
+    const currentVal = select.value || "all";
+    select.innerHTML = "";
+
+    Object.entries(MASTER_CITIES).forEach(([key, cityData]) => {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = key === "all"
+        ? `🇮🇳 ${cityData.name}`
+        : `📍 ${cityData.name} (${cityData.lat}°N, ${cityData.lon}°E)`;
+      select.appendChild(opt);
+    });
+
+    select.value = MASTER_CITIES[currentVal] ? currentVal : "all";
+
+    // Convert into custom interactive searchable dropdown menu
+    makeSelectSearchable(id);
+  });
+}
+
 function wireCitySelect(id, handler) {
   document.getElementById(id)?.addEventListener("change", e => handler(e.target.value));
+}
+
+function wireCitySearch(inputId, selectId) {
+  const input = document.getElementById(inputId);
+  const select = document.getElementById(selectId);
+  if (!input || !select) return;
+
+  input.addEventListener("input", e => {
+    const q = e.target.value.toLowerCase().trim();
+    select.innerHTML = "";
+
+    let matchCount = 0;
+    Object.entries(MASTER_CITIES).forEach(([key, cityData]) => {
+      const matchName = cityData.name.toLowerCase();
+      const matchState = (cityData.state || "").toLowerCase();
+      const matchCoords = `${cityData.lat},${cityData.lon}`;
+
+      if (!q || matchName.includes(q) || matchState.includes(q) || matchCoords.includes(q)) {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = key === "all"
+          ? `🇮🇳 ${cityData.name}`
+          : `📍 ${cityData.name} (${cityData.lat}°N, ${cityData.lon}°E)`;
+        select.appendChild(opt);
+        matchCount++;
+      }
+    });
+
+    if (matchCount > 0) {
+      select.selectedIndex = 0;
+      select.dispatchEvent(new Event("change"));
+    }
+  });
+}
+
+function makeSelectSearchable(selectId) {
+  const select = document.getElementById(selectId);
+  if (!select || select.dataset.searchableInit) return;
+  select.dataset.searchableInit = "true";
+
+  select.style.display = "none";
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "custom-select-wrapper";
+
+  const trigger = document.createElement("div");
+  trigger.className = "custom-select-trigger";
+
+  const currentCity = MASTER_CITIES[select.value] || MASTER_CITIES["all"];
+  trigger.innerHTML = `<span>${select.value === 'all' ? '🇮🇳' : '📍'} ${currentCity.name}</span> <span style="font-size:10px; color:#00d4ff;">▼</span>`;
+
+  const dropdown = document.createElement("div");
+  dropdown.className = "custom-select-dropdown";
+
+  const searchBox = document.createElement("div");
+  searchBox.className = "custom-select-search-box";
+  const searchInput = document.createElement("input");
+  searchInput.type = "text";
+  searchInput.className = "custom-select-search-input";
+  searchInput.placeholder = "🔍 Search city, state or lat/lon...";
+  searchBox.appendChild(searchInput);
+
+  const optionsContainer = document.createElement("div");
+  optionsContainer.className = "custom-select-options";
+
+  function renderOptions(filterQuery = "") {
+    optionsContainer.innerHTML = "";
+    const q = filterQuery.toLowerCase().trim();
+
+    Object.entries(MASTER_CITIES).forEach(([key, cityData]) => {
+      const matchName = cityData.name.toLowerCase();
+      const matchState = (cityData.state || "").toLowerCase();
+      const matchCoords = `${cityData.lat},${cityData.lon}`;
+
+      if (!q || matchName.includes(q) || matchState.includes(q) || matchCoords.includes(q)) {
+        const item = document.createElement("div");
+        item.className = "custom-select-option" + (select.value === key ? " selected" : "");
+        item.innerHTML = `
+          <span>${key === 'all' ? '🇮🇳' : '📍'} ${cityData.name}</span>
+          <span class="opt-coords">${cityData.lat}°N, ${cityData.lon}°E</span>
+        `;
+
+        item.addEventListener("click", (e) => {
+          e.stopPropagation();
+          select.value = key;
+          select.dispatchEvent(new Event("change"));
+          trigger.querySelector("span").textContent = key === "all" ? `🇮🇳 ${cityData.name}` : `📍 ${cityData.name}`;
+          dropdown.classList.remove("open");
+        });
+
+        optionsContainer.appendChild(item);
+      }
+    });
+  }
+
+  renderOptions();
+
+  dropdown.appendChild(searchBox);
+  dropdown.appendChild(optionsContainer);
+  wrapper.appendChild(trigger);
+  wrapper.appendChild(dropdown);
+
+  select.parentNode.insertBefore(wrapper, select);
+
+  trigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    document.querySelectorAll(".custom-select-dropdown.open").forEach(d => {
+      if (d !== dropdown) d.classList.remove("open");
+    });
+    const isOpen = dropdown.classList.toggle("open");
+    if (isOpen) {
+      searchInput.value = "";
+      renderOptions();
+      setTimeout(() => searchInput.focus(), 50);
+    }
+  });
+
+  searchInput.addEventListener("input", (e) => {
+    renderOptions(e.target.value);
+  });
+
+  select.addEventListener("change", () => {
+    const active = MASTER_CITIES[select.value] || MASTER_CITIES["all"];
+    trigger.querySelector("span").textContent = select.value === "all" ? `🇮🇳 ${active.name}` : `📍 ${active.name}`;
+    renderOptions();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!wrapper.contains(e.target)) {
+      dropdown.classList.remove("open");
+    }
+  });
 }
 
 function syncCitySelects() {
@@ -1486,21 +1660,38 @@ function runSimulation() {
   }, 1000);
 }
 
-let whatifMapMode = "live";
+let whatifMapMode = "base";
+
+function restoreLiveBaselineMap() {
+  if (typeof STATE_WEATHER_BASE !== "undefined" && STATE_WEATHER_BASE) {
+    Object.keys(STATE_WEATHER_BASE).forEach(state => {
+      if (STATE_WEATHER[state]) {
+        STATE_WEATHER[state] = JSON.parse(JSON.stringify(STATE_WEATHER_BASE[state]));
+      }
+    });
+  }
+
+  if (typeof buildChoropleth === "function") buildChoropleth();
+  if (typeof drawHeatmap === "function") drawHeatmap();
+  if (typeof buildWeatherEffects === "function") buildWeatherEffects();
+  if (typeof updateKPIsForRegion === "function") updateKPIsForRegion(whatifCityKey);
+}
 
 function toggleWhatIfMapMode(mode) {
   whatifMapMode = mode;
-  const liveBtn = document.getElementById("whatif-map-live-btn");
+  const baseBtn = document.getElementById("whatif-map-base-btn");
   const simBtn = document.getElementById("whatif-map-sim-btn");
 
-  if (mode === "live") {
-    if (liveBtn) liveBtn.className = "map-toggle-btn active";
+  if (mode === "base" || mode === "live") {
+    if (baseBtn) baseBtn.className = "map-toggle-btn active";
     if (simBtn) simBtn.className = "map-toggle-btn";
-    updateDashboardComparison(whatifCityKey);
-    if (typeof buildChoropleth === "function") buildChoropleth();
+
+    // Restore original live baseline state weather data & redraw map layers
+    restoreLiveBaselineMap();
   } else {
     if (simBtn) simBtn.className = "map-toggle-btn active";
-    if (liveBtn) liveBtn.className = "map-toggle-btn";
+    if (baseBtn) baseBtn.className = "map-toggle-btn";
+
     const maxTemp = parseFloat(document.getElementById("wi-maxtemp-slider")?.value || 37);
     const rainfall = parseFloat(document.getElementById("wi-rain-slider")?.value || 18);
     updateMapForWhatIf(maxTemp, rainfall);
@@ -1605,21 +1796,44 @@ function computeWhatIfAbsolute(maxTemp, minTemp, rainfall, humidity, co2) {
     historicalAnalog = "2020 Cyclone Amphan Atmospheric Disruption";
   }
 
-  // Top 5 Most-Affected Regions Ranking
-  const allRegions = [
-    { name: "New Delhi (NCR)", vulnerability: "Urban Heat Island & High AQI Feedback", baseSens: 1.35 },
-    { name: "Rajasthan (Jaipur)", vulnerability: "Arid Border Heat Stress", baseSens: 1.25 },
-    { name: "Gujarat (Ahmedabad)", vulnerability: "Extreme Summer Thermal Index", baseSens: 1.20 },
-    { name: "Maharashtra (Mumbai)", vulnerability: "Coastal Humidity & Heat Stress", baseSens: 1.15 },
-    { name: "Tamil Nadu (Chennai)", vulnerability: "Monsoonal Timing Deficit", baseSens: 1.10 }
-  ];
+  // Dynamic Real-Time Evaluation Across All 36 Indian States & UTs
+  const stateImpacts = Object.entries(STATE_MODEL_MAP).map(([stateName, config]) => {
+    // Apply state offsets to simulated maxTemp, minTemp, and rainfall parameters
+    const sMax = +(maxTemp + config.off.max).toFixed(1);
+    const sMin = +(minTemp + (config.off.min || 0)).toFixed(1);
+    const sRain = Math.max(0, +(rainfall + config.off.rain).toFixed(1));
 
-  const topRegions = allRegions.map(r => {
-    const simHI = +(heatIndexVal * r.baseSens).toFixed(1);
-    const sev = simHI > 48 ? "Critical" : simHI > 38 ? "Severe" : "Moderate";
-    const pillCls = simHI > 48 ? "high" : simHI > 38 ? "mod" : "low";
-    return { name: r.name, vulnerability: r.vulnerability, heatIndex: simHI, severity: sev, pillCls };
-  }).sort((a, b) => b.heatIndex - a.heatIndex);
+    // Calculate NOAA Heat Index for this state under simulation
+    let sHeatIdx = sMax;
+    if (sMax >= 27) {
+      sHeatIdx = +(sMax + 0.55 * (1 - 0.01 * humidity) * (sMax - 14.5)).toFixed(1);
+    }
+
+    // Impact Score combines thermal stress and precipitation anomaly
+    const impactScore = +(sHeatIdx + sRain * 0.4).toFixed(1);
+
+    let vulnerability = "Monsoonal Timing & Convective Shift";
+    if (sMax >= 40) vulnerability = "Severe Heatwave & High Thermal Stress";
+    else if (sRain >= 50) vulnerability = "Torrential Downpour & Flash Flood Risk";
+    else if (sMax <= 15) vulnerability = "Mountain Coldwave & Valley Frost Risk";
+    else if (sRain < 5) vulnerability = "Arid Monsoon Deficit & Agricultural Stress";
+
+    const sev = (sHeatIdx >= 45 || sRain >= 70) ? "Critical" : ((sHeatIdx >= 38 || sRain >= 35) ? "Severe" : "Moderate");
+    const pillCls = sev === "Critical" ? "high" : sev === "Severe" ? "mod" : "low";
+
+    return {
+      name: stateName,
+      vulnerability: vulnerability,
+      heatIndex: sHeatIdx,
+      simRain: sRain,
+      impactScore: impactScore,
+      severity: sev,
+      pillCls: pillCls
+    };
+  });
+
+  // Sort dynamically by impact score and extract top 5
+  const topRegions = stateImpacts.sort((a, b) => b.impactScore - a.impactScore).slice(0, 5);
 
   // Auto-Generated Narrative Sentence
   const cityName = REGION_INFO[whatifCityKey]?.name || "Selected Region";
