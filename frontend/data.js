@@ -582,12 +582,24 @@ const REPORT_SUMMARIES = {
 
 // ── WEEKLY TREND DATA PER CITY (for reports page) ──
 function getCityWeeklyTrend(cityKey) {
+  const vals = (typeof getCityModelValues === "function") ? getCityModelValues(cityKey) : null;
   const off = CITY_FORECAST_DATA[cityKey]?.offsets || { max: 0, min: 0, rain: 0 };
+
+  const maxTemps = FORECAST_7DAY_EXTENDED.map((d, i) =>
+    i === 0 && vals ? vals.maxTemp : +(d.max_temp + off.max).toFixed(1)
+  );
+  const minTemps = FORECAST_7DAY_EXTENDED.map((d, i) =>
+    i === 0 && vals ? vals.minTemp : +(d.min_temp + (off.min || 0)).toFixed(1)
+  );
+  const rainfall = FORECAST_7DAY_EXTENDED.map((d, i) =>
+    i === 0 && vals ? vals.rainfall : +(Math.max(0, d.rainfall + off.rain)).toFixed(1)
+  );
+
   return {
-    labels:   FORECAST_7DAY_EXTENDED.map(d => d.dateLabel),
-    maxTemps: FORECAST_7DAY_EXTENDED.map(d => +(d.max_temp + off.max).toFixed(1)),
-    minTemps: FORECAST_7DAY_EXTENDED.map(d => +(d.min_temp + off.min).toFixed(1)),
-    rainfall: FORECAST_7DAY_EXTENDED.map(d => +(Math.max(0, d.rainfall + off.rain)).toFixed(1))
+    labels: FORECAST_7DAY_EXTENDED.map(d => d.dateLabel),
+    maxTemps,
+    minTemps,
+    rainfall
   };
 }
 

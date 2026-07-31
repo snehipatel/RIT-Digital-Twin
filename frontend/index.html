@@ -1025,6 +1025,13 @@
         <!-- Filter Bar -->
         <div class="alerts-filter-bar glass-card">
           <div class="filter-group">
+            <span class="filter-label">STATE:</span>
+            <select class="alert-select-control" id="alert-state-select">
+              <option value="all">📍 All States (India)</option>
+            </select>
+          </div>
+          <div class="filter-divider"></div>
+          <div class="filter-group">
             <span class="filter-label">STATUS:</span>
             <button class="filter-btn active" data-filter-status="all" id="filt-status-all">All</button>
             <button class="filter-btn" data-filter-status="active" id="filt-status-active">Active</button>
@@ -1039,6 +1046,10 @@
             <button class="filter-btn sev-high" data-filter-sev="high" id="filt-sev-high">High</button>
             <button class="filter-btn sev-moderate" data-filter-sev="moderate" id="filt-sev-moderate">Moderate</button>
             <button class="filter-btn sev-low" data-filter-sev="low" id="filt-sev-low">Low</button>
+          </div>
+          <div class="filter-divider"></div>
+          <div class="filter-group" style="flex: 1; min-width: 180px;">
+            <input type="text" id="alert-search-input" placeholder="🔍 Search state, hazard, or detail..." class="alert-search-control" style="width: 100%;" />
           </div>
         </div>
 
@@ -1182,7 +1193,7 @@
             <div class="about-hero-text">
               <p class="about-lead">
                 <strong>RIT</strong> is a high-fidelity AI-powered Climate Digital Twin of the Indian
-                subcontinent, developed for the ISRO Hackathon 2025. It integrates satellite remote sensing data from
+                subcontinent, developed for the ISRO Hackathon 2026. It integrates satellite remote sensing data from
                 ISRO's INSAT constellation with IMD gridded observations to provide real-time climate monitoring,
                 short-term forecasting, and what-if scenario simulation.
               </p>
@@ -1375,7 +1386,7 @@
         <div class="about-card glass-card">
           <div class="panel-header">
             <span class="panel-title"><i data-lucide="users" size="16"></i> Project Team</span>
-            <span class="model-tag">ISRO Hackathon 2025</span>
+            <span class="model-tag">ISRO Hackathon 2026</span>
           </div>
           <div class="team-grid">
             <div class="team-member">
