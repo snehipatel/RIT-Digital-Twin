@@ -1,12 +1,17 @@
 /**
  * map.js — India Climate Digital Twin
  *
- * ARCHITECTURE (fixes all bleeding issues):
+ * PREMIUM MAP ENGINE v2.1
+ * ─────────────────────────
  *  1. Leaflet GeoJSON CHOROPLETH fills each state polygon with its temperature
  *     colour → geometrically IMPOSSIBLE to bleed outside India borders.
- *  2. Separate canvas layer for weather (clouds / rain).
- *     Every particle is anchored to a specific state centre and CANNOT
- *     drift beyond a hard pixel radius from that centre.
+ *  2. IMAGE-BASED DYNAMIC CLOUDS — uses `cloud.png` to render realistic, drifting,
+ *     wind-aware cloud masses over cloudy/stormy states.
+ *  3. SMOOTH CONTOUR HEATMAP — Gaussian-blurred IDW interpolation for broadcast-
+ *     quality "weather map on TV" isobands.
+ *  4. HOT ZONE GLOW/BLOOM — additive outer-glow on states ≥ 38°C.
+ *  5. SONAR PING — dual-ring radar ripple on hover.
+ *  6. DARK BASEMAP with subtle terrain relief (Carto Dark Matter).
  */
 
 // ── GLOBALS ────────────────────────────────────────────────────
@@ -24,18 +29,24 @@ let _hmThrottleTimer = null;   // throttle handle for heatmap redraws
 let _wxThrottleTimer = null;   // throttle handle for weather rebuilds
 let _cachedZoomFactor = 1;     // cached per-frame zoom factor
 let _isMapMoving = false;      // true during zoom/pan — animation paused for smoothness
+let _lastFrameTime = 0;        // for delta-time animation
 
+// Load cloud image asset
+const cloudImg = new Image();
+cloudImg.src = "cloud.png";
+let cloudImgLoaded = false;
+cloudImg.onload = () => { cloudImgLoaded = true; };
+
+// Higher resolution offscreen canvas for smooth heatmap
 const offscreenCanvas = document.createElement("canvas");
-offscreenCanvas.width = 100;
-offscreenCanvas.height = 80;
+offscreenCanvas.width = 200;
+offscreenCanvas.height = 160;
 const offscreenCtx = offscreenCanvas.getContext("2d", { willReadFrequently: true });
 
 let clouds = [], rain = [];
 
 // ═══════════════════════════════════════════════════════════════
 //  SAMPLE STATE DATA
-//  Keys MUST match NAME_1 property in geohacker India GeoJSON.
-//  Replace values with real model outputs on Day 5.
 // ═══════════════════════════════════════════════════════════════
 const STATE_WEATHER = {
   // name                       maxT  minT  rain  cloud  hasRain hasWind
@@ -78,7 +89,6 @@ const STATE_WEATHER = {
 };
 const STATE_FALLBACK = { maxTemp: 35, minTemp: 24, rainfall: 15, cloud: 0.30, hasRain: false, hasWind: false };
 
-// Geographic centre of each state for placing weather icons
 const STATE_CENTERS = {
   "Jammu & Kashmir": [34.0, 76.5], "Himachal Pradesh": [31.8, 77.1],
   "Uttarakhand": [30.3, 79.0], "Punjab": [31.0, 75.3],
@@ -100,12 +110,10 @@ const STATE_CENTERS = {
   "Dadra & Nagar Haveli": [20.2, 73.0], "Daman & Diu": [20.4, 72.8],
 };
 
-// Helper: get data for a GeoJSON feature
 function getStateData(feature) {
   const rawName = feature.properties.STNAME_SH || feature.properties.STNAME || feature.properties.NAME_1 || feature.properties.ST_NM || "";
   let name = rawName.trim();
 
-  // Normalization mappings to align GeoJSON properties with STATE_WEATHER database keys
   if (name === "Odisha") name = "Orissa";
   if (name === "Delhi") name = "NCT of Delhi";
   if (name === "Andaman & Nicobar") name = "Andaman & Nicobar Island";
@@ -114,15 +122,12 @@ function getStateData(feature) {
   return STATE_WEATHER[name] || STATE_WEATHER[rawName] || STATE_FALLBACK;
 }
 
-// Helper: get display value for current layer
 function getLayerValue(data) {
   if (currentLayer === "min_temp") return data.minTemp;
   if (currentLayer === "rainfall") return data.rainfall;
   return data.maxTemp;
 }
 
-// ── COLOUR HELPER ──────────────────────────────────────────────
-// Returns "rgb(r,g,b)" suitable for Leaflet fillColor
 function scaleColor(val, scale) {
   const t = Math.max(0, Math.min(1, (val - scale.min) / (scale.max - scale.min)));
   const N = scale.stops.length;
@@ -133,8 +138,6 @@ function scaleColor(val, scale) {
   const B = hexToRgb(scale.stops[lo + 1]);
   return `rgb(${Math.round(A.r + (B.r - A.r) * frac)},${Math.round(A.g + (B.g - A.g) * frac)},${Math.round(A.b + (B.b - A.b) * frac)})`;
 }
-
-// Wind field removed — no wind visualisation
 
 // ── HEATMAP OVERLAY & IDW INTERPOLATION ─────────────────────────
 function getStateValue(stateName, layer) {
@@ -216,6 +219,72 @@ function drawPolygon(ctx, rings) {
   });
 }
 
+// ── GAUSSIAN BLUR for smooth contour heatmap ──────────────────
+function gaussianBlurImageData(imgData, w, h, radius) {
+  const pixels = imgData.data;
+  const tempData = new Uint8ClampedArray(pixels.length);
+
+  const kernel = buildGaussianKernel(radius);
+  const kLen = kernel.length;
+  const kHalf = Math.floor(kLen / 2);
+
+  // Horizontal pass
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let r = 0, g = 0, b = 0, a = 0;
+      for (let k = 0; k < kLen; k++) {
+        const sx = Math.min(w - 1, Math.max(0, x + k - kHalf));
+        const idx = (y * w + sx) * 4;
+        const weight = kernel[k];
+        r += pixels[idx] * weight;
+        g += pixels[idx + 1] * weight;
+        b += pixels[idx + 2] * weight;
+        a += pixels[idx + 3] * weight;
+      }
+      const dIdx = (y * w + x) * 4;
+      tempData[dIdx] = r;
+      tempData[dIdx + 1] = g;
+      tempData[dIdx + 2] = b;
+      tempData[dIdx + 3] = a;
+    }
+  }
+
+  // Vertical pass
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let r = 0, g = 0, b = 0, a = 0;
+      for (let k = 0; k < kLen; k++) {
+        const sy = Math.min(h - 1, Math.max(0, y + k - kHalf));
+        const idx = (sy * w + x) * 4;
+        const weight = kernel[k];
+        r += tempData[idx] * weight;
+        g += tempData[idx + 1] * weight;
+        b += tempData[idx + 2] * weight;
+        a += tempData[idx + 3] * weight;
+      }
+      const dIdx = (y * w + x) * 4;
+      pixels[dIdx] = r;
+      pixels[dIdx + 1] = g;
+      pixels[dIdx + 2] = b;
+      pixels[dIdx + 3] = a;
+    }
+  }
+}
+
+function buildGaussianKernel(radius) {
+  const sigma = radius / 2;
+  const size = radius * 2 + 1;
+  const kernel = new Float32Array(size);
+  let sum = 0;
+  for (let i = 0; i < size; i++) {
+    const x = i - radius;
+    kernel[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
+    sum += kernel[i];
+  }
+  for (let i = 0; i < size; i++) kernel[i] /= sum;
+  return kernel;
+}
+
 function initHeatmapCanvas() {
   hmCanvas = document.createElement("canvas");
   hmCanvas.id = "heatmap-canvas";
@@ -236,7 +305,6 @@ function initHeatmapCanvas() {
   window.addEventListener("resize", resize);
   map.on("resize", resize);
 
-  // Throttle heatmap redraws during pan/zoom to reduce CPU load
   const throttledDrawHeatmap = () => {
     if (_hmThrottleTimer) return;
     _hmThrottleTimer = setTimeout(() => {
@@ -281,15 +349,22 @@ function drawHeatmap() {
       data[idx] = color.r;
       data[idx + 1] = color.g;
       data[idx + 2] = color.b;
-      data[idx + 3] = 160; // Beautiful translucent layer for dark mode integration
+      data[idx + 3] = 155;
     }
   }
+
+  gaussianBlurImageData(imgData, gw, gh, 3);
+  gaussianBlurImageData(imgData, gw, gh, 2);
+
   offscreenCtx.putImageData(imgData, 0, 0);
 
   hmCtx.save();
   drawGeoJsonPath(hmCtx);
   hmCtx.clip("evenodd");
+
+  hmCtx.filter = "blur(2px)";
   hmCtx.drawImage(offscreenCanvas, 0, 0, width, height);
+  hmCtx.filter = "none";
   hmCtx.restore();
 }
 
@@ -326,17 +401,24 @@ function initMap() {
     minZoom: 4, maxZoom: 12,
   });
 
-  // Dark base tiles — no labels (labels come from separate layer on top)
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", {
+  // Dark basemap with subtle terrain relief
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
     attribution: "© OpenStreetMap | © CartoDB | ISRO RIT",
     subdomains: "abcd", maxZoom: 19,
   }).addTo(map);
 
-  // Create the weather-effects canvas
+  const terrainOverlay = L.tileLayer(
+    "https://tiles.stadiamaps.com/tiles/stamen_terrain_lines/{z}/{x}/{y}{r}.png", {
+      maxZoom: 18,
+      opacity: 0.07,
+      attribution: "© Stadia Maps"
+    }
+  );
+  terrainOverlay.addTo(map);
+
   initWeatherCanvas();
   initHeatmapCanvas();
 
-  // Load LOCAL india.geojson (served by python -m http.server, zero latency, no CORS)
   fetch("india.geojson")
     .then(res => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -349,15 +431,16 @@ function initMap() {
       buildWeatherEffects();
       startAnim();
       updateLegend(COLOR_SCALES["max_temp"], "max_temp");
+
+      autoInitAmbientFromData();
     })
     .catch(err => {
       console.error("GeoJSON failed:", err);
-      // Still start the animation (weather effects won't have choropleth)
       startAnim();
       updateLegend(COLOR_SCALES["max_temp"], "max_temp");
+      autoInitAmbientFromData();
     });
 
-  // Dark labels on top of everything
   L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png", {
     subdomains: "abcd", maxZoom: 19, zIndex: 700,
     pane: "overlayPane",
@@ -365,10 +448,6 @@ function initMap() {
 
   addOceanLabels();
 
-  // ── INTERACTION PERF: pause canvas animation during zoom/pan ──
-  // Leaflet animates tiles via CSS transforms (GPU, free). Our canvas
-  // calls latLngToContainerPoint each frame which is expensive during
-  // the CSS zoom animation. Pausing the RAF loop eliminates the stutter.
   map.on("zoomstart movestart", () => {
     _isMapMoving = true;
     if (animId) { cancelAnimationFrame(animId); animId = null; }
@@ -376,7 +455,6 @@ function initMap() {
 
   map.on("zoomend moveend", () => {
     _isMapMoving = false;
-    // Rebuild particle positions after map settles, then resume animation
     const throttledBuildWx = () => {
       if (_wxThrottleTimer) clearTimeout(_wxThrottleTimer);
       _wxThrottleTimer = setTimeout(() => {
@@ -389,28 +467,39 @@ function initMap() {
   });
 }
 
+function autoInitAmbientFromData() {
+  const regionSelect = document.getElementById("region-select");
+  const regionKey = regionSelect?.value || "ahmedabad";
+  if (typeof updateKPIsForRegion === "function") {
+    updateKPIsForRegion(regionKey);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
-//  CHOROPLETH — state polygons filled with temperature colour
-//  ✓ Zero bleeding: Leaflet clips the fill to the polygon path.
+//  CHOROPLETH
 // ═══════════════════════════════════════════════════════════════
 function buildChoropleth() {
   if (!indiaGeoData || !map) return;
 
-  // Remove previous
   if (choroplethLayer) map.removeLayer(choroplethLayer);
   if (window._glowLayers) window._glowLayers.forEach(l => map.removeLayer(l));
   window._glowLayers = [];
 
   const scale = COLOR_SCALES[currentLayer];
 
-  // ── FILL LAYER ──
   choroplethLayer = L.geoJSON(indiaGeoData, {
-    style: feature => ({
-      fillColor: scaleColor(getLayerValue(getStateData(feature)), scale),
-      fillOpacity: 0.0,
-      color: "rgba(0,220,255,0.0)",  // no border on fill layer (separate glow pass)
-      weight: 0,
-    }),
+    style: feature => {
+      const d = getStateData(feature);
+      const val = getLayerValue(d);
+      const isHot = d && d.maxTemp >= 38;
+      return {
+        fillColor: scaleColor(val, scale),
+        fillOpacity: 0.0,
+        color: isHot ? "rgba(255,107,53,0.5)" : "rgba(0,220,255,0.0)",
+        weight: isHot ? 1.5 : 0,
+        className: isHot ? "hot-zone-glow" : ""
+      };
+    },
     onEachFeature: (feature, layer) => {
       const d = getStateData(feature);
       const name = feature.properties.NAME_1 || "–";
@@ -422,10 +511,62 @@ function buildChoropleth() {
          </div>`,
         { className: "map-tooltip", sticky: true }
       );
+
+      layer.on("mouseover", (e) => {
+        if (mapCtr && e.latlng) {
+          const pt = map.latLngToContainerPoint(e.latlng);
+
+          const ping1 = document.createElement("div");
+          ping1.className = "sonar-ping-marker";
+          ping1.style.left = pt.x + "px";
+          ping1.style.top = pt.y + "px";
+          mapCtr.appendChild(ping1);
+          setTimeout(() => ping1.remove(), 1400);
+
+          setTimeout(() => {
+            const ping2 = document.createElement("div");
+            ping2.className = "sonar-ping-marker sonar-ring-2";
+            ping2.style.left = pt.x + "px";
+            ping2.style.top = pt.y + "px";
+            mapCtr.appendChild(ping2);
+            setTimeout(() => ping2.remove(), 1400);
+          }, 200);
+
+          const dot = document.createElement("div");
+          dot.className = "sonar-center-dot";
+          dot.style.left = pt.x + "px";
+          dot.style.top = pt.y + "px";
+          mapCtr.appendChild(dot);
+          setTimeout(() => dot.remove(), 800);
+        }
+
+        if (typeof updateAmbientWeatherState === "function") {
+          updateAmbientWeatherState(d.maxTemp, d.minTemp, d.rainfall);
+        }
+      });
     }
   }).addTo(map);
 
-  // ── BORDER GLOW (3 passes for neon effect) ──
+  // HOT ZONE GLOW/BLOOM LAYER
+  const hotGlowLayer = L.geoJSON(indiaGeoData, {
+    style: feature => {
+      const d = getStateData(feature);
+      const isHot = d && d.maxTemp >= 38;
+      if (!isHot) return { weight: 0, fillOpacity: 0, opacity: 0 };
+      const intensity = Math.min(1, (d.maxTemp - 38) / 10);
+      return {
+        fillOpacity: 0.04 + intensity * 0.06,
+        fillColor: `rgba(255, ${Math.round(100 - intensity * 40)}, 50, 1)`,
+        color: `rgba(255, ${Math.round(107 - intensity * 50)}, 53, ${0.3 + intensity * 0.3})`,
+        weight: 6 + intensity * 6,
+        className: "hot-zone-glow"
+      };
+    },
+    interactive: false
+  });
+  hotGlowLayer.addTo(map);
+  window._glowLayers.push(hotGlowLayer);
+
   const borderStyles = [
     { color: "rgba(0,212,255,0.06)", weight: 14 },
     { color: "rgba(0,212,255,0.22)", weight: 4 },
@@ -438,7 +579,7 @@ function buildChoropleth() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  WEATHER CANVAS  (clouds / rain / wind)
+//  WEATHER CANVAS (IMAGE CLOUDS USING `cloud.png` + RAIN)
 // ═══════════════════════════════════════════════════════════════
 function initWeatherCanvas() {
   wxCanvas = document.createElement("canvas");
@@ -460,7 +601,6 @@ function initWeatherCanvas() {
   map.on("resize", resize);
 }
 
-// ── Spawn weather particles for each state ──
 function buildWeatherEffects() {
   clouds = [];
   rain = [];
@@ -471,49 +611,34 @@ function buildWeatherEffects() {
     if (!center) return;
     const [lat, lon] = center;
 
-    // ── CLOUDS ── max 2 per state, strictly near center
-    //   Heavy cloud (≥0.60): dark gray-blue storm cloud — large regional size
-    //   Light  cloud (0.25–0.59): white fair-weather cloud — medium regional size
-    //   Clear  (< 0.25): none
-    const numC = data.cloud < 0.25 ? 0 : data.cloud < 0.60 ? 1 : 2;
-    const storm = data.cloud >= 0.60;
+    // ── DYNAMIC CLOUDS & RAIN (WHEREVER RAINFALL > 0 MM) ──
+    if (data.rainfall > 0) {
+      const severity = Math.min(1, data.rainfall / 100);
+      const numClouds = data.rainfall < 15 ? 1 : data.rainfall < 50 ? 2 : 3;
+      const isStorm = data.rainfall >= 35;
+      const isMonsoon = lon > 78;
+      const windAngle = isMonsoon ? (Math.PI * 0.75 + Math.random() * 0.2) : (Math.PI * 0.5 + Math.random() * 0.3);
 
-    for (let i = 0; i < numC; i++) {
-      // Place clouds near state centre but slightly offset
-      const angle = (i / numC) * Math.PI * 2 + Math.random();
-      const latOff = Math.cos(angle) * (0.2 + Math.random() * 0.5);
-      const lonOff = Math.sin(angle) * (0.3 + Math.random() * 0.7);
-      clouds.push({
-        baseLat: lat + latOff,
-        baseLon: lon + lonOff,
-        dLon: (Math.random() - 0.3) * 0.2,   // initial drift phase
-        maxDrift: 0.6,                         // max lon drift
-        // Increased sizes: storm 28–42px, fair 20–32px (regional weather system scale)
-        size: storm ? 28 + Math.random() * 14
-          : 20 + Math.random() * 12,
-        opacity: storm ? 0.70 + data.cloud * 0.22
-          : 0.48 + data.cloud * 0.28,
-        speed: 0.00012 + Math.random() * 0.0001,
-        storm,
-        homeLat: lat, homeLon: lon
-      });
-    }
+      for (let i = 0; i < numClouds; i++) {
+        const angle = (i / numClouds) * Math.PI * 2 + Math.random();
+        const dist = 0.2 + Math.random() * 0.4;
+        const latOff = Math.cos(angle) * dist;
+        const lonOff = Math.sin(angle) * dist * 1.3;
 
-    // ── RAIN ── only hasRain states, confined to ±55px of state centre
-    // Reduced particle count for performance (capped at 30)
-    if (data.hasRain) {
-      const n = Math.min(Math.round(data.rainfall * 0.28), 30);
-      for (let i = 0; i < n; i++) {
-        rain.push({
-          ox: (Math.random() - 0.5) * 110,   // ±55px horizontal
-          oy: Math.random() * 100,            // 0–100px vertical cycle
-          cLat: lat,
-          cLon: lon,
-          len: 4 + Math.random() * 5,
-          spd: 2.0 + Math.random() * 2.5,
-          opa: 0.18 + Math.random() * 0.28,
-          sinA: Math.sin((9 + Math.random() * 8) * Math.PI / 180),
-          cosA: Math.cos((9 + Math.random() * 8) * Math.PI / 180),
+        clouds.push({
+          baseLat: lat + latOff,
+          baseLon: lon + lonOff,
+          dLon: 0,
+          dLat: 0,
+          speedLon: Math.cos(windAngle) * (0.00012 + Math.random() * 0.00015),
+          speedLat: Math.sin(windAngle) * (0.00006 + Math.random() * 0.00008),
+          maxDrift: 0.7 + Math.random() * 0.3,
+          width: isStorm ? 65 + Math.random() * 30 : 45 + Math.random() * 25,
+          height: isStorm ? 38 + Math.random() * 18 : 28 + Math.random() * 15,
+          opacity: isStorm ? Math.min(0.95, 0.70 + severity * 0.25) : Math.min(0.85, 0.45 + severity * 0.35),
+          turbSeed: Math.random() * Math.PI * 2,
+          turbSpeed: 0.8 + Math.random() * 1.2,
+          isStorm
         });
       }
     }
@@ -525,127 +650,74 @@ function buildWeatherEffects() {
 // ═══════════════════════════════════════════════════════════════
 function startAnim() {
   if (animId) cancelAnimationFrame(animId);
-  if (_isMapMoving) return;  // don't start if map is mid-transition
-  (function frame() {
-    if (_isMapMoving) { animId = null; return; }  // stop if zoom starts
-    drawWeather();
+  if (_isMapMoving) return;
+  _lastFrameTime = performance.now();
+  (function frame(now) {
+    if (_isMapMoving) { animId = null; return; }
+    const dt = Math.min((now - _lastFrameTime) / 16.67, 3);
+    _lastFrameTime = now;
+    drawWeather(dt, now);
     animId = requestAnimationFrame(frame);
-  })();
+  })(performance.now());
 }
 
-function drawWeather() {
+function drawWeather(dt, now) {
   if (!wxCtx || !wxCanvas || !map) return;
-  // Cache zoom factor once per frame
   const zoom = map.getZoom();
   _cachedZoomFactor = Math.max(0.6, Math.min(4.0, Math.pow(1.28, zoom - 5)));
   wxCtx.clearRect(0, 0, wxCanvas.width, wxCanvas.height);
-  drawRain(wxCtx);
-  drawClouds(wxCtx);
+  drawCloudSprites(wxCtx, dt, now);
 }
 
-// Wind rendering removed — wind particles/streamlines have been eliminated
-
-// ── RAIN (strictly within ±55px of state centre) ──────────────
-// Batched by opacity bucket to minimise ctx state changes
-function drawRain(ctx) {
-  // Group rain drops by centre point to batch latLngToContainerPoint calls
-  // (each unique cLat/cLon pair is looked up once)
-  const baseCache = new Map();
-
-  ctx.lineWidth = 0.7;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = "rgba(170,215,255,0.9)";
-
-  rain.forEach(d => {
-    d.oy = (d.oy + d.spd) % 100;
-
-    const key = d.cLat + "|" + d.cLon;
-    let base = baseCache.get(key);
-    if (!base) {
-      base = map.latLngToContainerPoint([d.cLat, d.cLon]);
-      baseCache.set(key, base);
-    }
-
-    const x = base.x + d.ox + d.oy * d.sinA * 0.18;
-    const y = base.y - 40 + d.oy;
-
-    ctx.globalAlpha = d.opa;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + d.sinA * d.len, y + d.cosA * d.len);
-    ctx.stroke();
-  });
-  ctx.globalAlpha = 1;
+function drawRainParticles(ctx, dt) {
+  // Rain particles on map removed per user request
 }
 
-// ── CLOUDS (anchored to state centres) ────────────────────────
-function drawClouds(ctx) {
-  // Use cached zoom factor computed once per frame in drawWeather()
+// ── CLOUDS USING `cloud.png` IMAGE ASSET ─────────────────────
+function drawCloudSprites(ctx, dt, now) {
+  if (!cloudImgLoaded) return;
   const zf = _cachedZoomFactor;
+  const time = now * 0.001;
 
   clouds.forEach(c => {
-    c.dLon += c.speed;
-    // Bounce back within maxDrift degrees
-    if (Math.abs(c.dLon) > c.maxDrift) c.speed = -Math.abs(c.speed) * Math.sign(c.dLon);
+    c.dLon += c.speedLon * dt;
+    c.dLat += c.speedLat * dt;
 
-    const px = map.latLngToContainerPoint([c.baseLat, c.baseLon + c.dLon]);
+    const turbX = Math.sin(time * c.turbSpeed + c.turbSeed) * 0.0004;
+    const turbY = Math.cos(time * c.turbSpeed * 0.8 + c.turbSeed) * 0.0003;
+
+    if (Math.abs(c.dLon) > c.maxDrift) {
+      c.speedLon = -Math.abs(c.speedLon) * Math.sign(c.dLon);
+    }
+
+    const px = map.latLngToContainerPoint([
+      c.baseLat + c.dLat + turbY,
+      c.baseLon + c.dLon + turbX
+    ]);
+
+    const w = c.width * zf;
+    const h = c.height * zf;
+
+    ctx.save();
     ctx.globalAlpha = c.opacity;
-    paintCloud(ctx, px.x, px.y, c.size * zf, c.storm);
+
+    if (c.isStorm) {
+      // Dark stormy tint for heavy rainfall/cloud states
+      ctx.filter = "brightness(0.55) contrast(1.25) drop-shadow(0px 8px 12px rgba(10,20,40,0.6))";
+    } else {
+      // Crisp bright cloud with soft drop shadow
+      ctx.filter = "brightness(1.05) drop-shadow(0px 4px 10px rgba(0,0,0,0.35))";
+    }
+
+    ctx.drawImage(cloudImg, px.x - w / 2, px.y - h / 2, w, h);
+    ctx.filter = "none";
+    ctx.restore();
   });
   ctx.globalAlpha = 1;
-}
-
-function paintCloud(ctx, cx, cy, s, storm) {
-  // ── CLOUD SILHOUETTE ─────────────────────────────────────────
-  // All bumps drawn in ONE beginPath + ONE fill → unified crisp shape.
-  // Single linear gradient instead of 4 radial gradients → 4× faster.
-  // No alpha fade-to-zero edges → defined cloud boundary, not cotton.
-  ctx.beginPath();
-  // Base layer — wide flat body
-  ctx.arc(cx, cy + s * 0.08, s * 0.44, 0, Math.PI * 2);
-  ctx.arc(cx - s * 0.40, cy + s * 0.12, s * 0.30, 0, Math.PI * 2);
-  ctx.arc(cx + s * 0.40, cy + s * 0.12, s * 0.30, 0, Math.PI * 2);
-  // Top bumps — give the classic cumulus silhouette
-  ctx.arc(cx - s * 0.16, cy - s * 0.18, s * 0.34, 0, Math.PI * 2);
-  ctx.arc(cx + s * 0.22, cy - s * 0.24, s * 0.30, 0, Math.PI * 2);
-  // Top-left shoulder
-  ctx.arc(cx - s * 0.42, cy - s * 0.06, s * 0.23, 0, Math.PI * 2);
-
-  // One linear gradient top→bottom for the whole cloud
-  const g = ctx.createLinearGradient(cx, cy - s * 0.6, cx, cy + s * 0.5);
-  if (storm) {
-    g.addColorStop(0, "rgba(195,200,225,0.96)");
-    g.addColorStop(0.40, "rgba(140,150,195,0.94)");
-    g.addColorStop(0.80, "rgba(100,112,168,0.90)");
-    g.addColorStop(1, "rgba(75, 88, 148,0.88)");
-  } else {
-    g.addColorStop(0, "rgba(255,255,255,0.97)");
-    g.addColorStop(0.40, "rgba(242,248,255,0.95)");
-    g.addColorStop(0.80, "rgba(220,236,252,0.90)");
-    g.addColorStop(1, "rgba(195,218,245,0.85)");
-  }
-  ctx.fillStyle = g;
-  ctx.fill();
-
-  // Thin highlight stroke for a crisp top edge
-  ctx.strokeStyle = storm
-    ? "rgba(210,215,240,0.30)"
-    : "rgba(255,255,255,0.55)";
-  ctx.lineWidth = 0.6;
-  ctx.stroke();
-
-  // Bottom shadow strip — gives flat-base depth
-  ctx.beginPath();
-  ctx.ellipse(cx, cy + s * 0.28, s * 0.68, s * 0.13, 0, 0, Math.PI * 2);
-  const sh = ctx.createLinearGradient(cx, cy + s * 0.15, cx, cy + s * 0.45);
-  sh.addColorStop(0, storm ? "rgba(55,65,125,0.38)" : "rgba(130,165,210,0.28)");
-  sh.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = sh;
-  ctx.fill();
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  LAYER SWITCHING
+//  LAYER SWITCHING & NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 function renderGrid(layerKey) {
   currentLayer = layerKey;
@@ -673,9 +745,6 @@ function updateLegend(scale) {
   mx.textContent = scale.max + scale.unit;
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  NAVIGATION
-// ═══════════════════════════════════════════════════════════════
 function flyToRegion(regionKey) {
   const r = REGION_INFO[regionKey] || REGION_INFO["all"];
   map.flyTo([r.lat, r.lon], r.zoom, { animate: true, duration: 1.2 });
