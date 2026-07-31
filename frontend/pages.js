@@ -752,40 +752,255 @@ function renderForecastRainChart() {
 }
 
 // ══════════════════════════════════════════
-// ALERTS PAGE
+// DYNAMIC 7-DAY MODEL PREDICTION ALERTS ENGINE
 // ══════════════════════════════════════════
+let alertFilterState = "all";
+let alertSearchQuery = "";
+
+// State mapping to LightGBM/XGBoost 7-day prediction models & offsets
+const STATE_MODEL_MAP = {
+  "Gujarat":           { cityKey: "ahmedabad",   name: "Gujarat",                off: { max: -5.0, min: 0.5, rain: 8.0 } },
+  "Maharashtra":       { cityKey: "mumbai",      name: "Maharashtra",            off: { max: -8.0, min: 0.0, rain: 55.0 } },
+  "Rajasthan":         { cityKey: "jaipur",      name: "Rajasthan",              off: { max: 4.0,  min: 1.0, rain: -15.0 } },
+  "NCT of Delhi":      { cityKey: "delhi",       name: "NCT of Delhi",           off: { max: 3.0,  min: 1.5, rain: -5.0 } },
+  "West Bengal":       { cityKey: "kolkata",     name: "West Bengal",            off: { max: -4.0, min: 0.5, rain: 35.0 } },
+  "Orissa":            { cityKey: "bhubaneswar", name: "Odisha",                 off: { max: -5.0, min: 0.0, rain: 45.0 } },
+  "Karnataka":         { cityKey: "bengaluru",   name: "Karnataka",              off: { max: -7.0, min: -3.0, rain: 22.0 } },
+  "Tamil Nadu":        { cityKey: "chennai",     name: "Tamil Nadu",             off: { max: -3.0, min: 1.0, rain: 15.0 } },
+  "Kerala":            { cityKey: "mumbai",      name: "Kerala",                 off: { max: -9.0, min: -2.0, rain: 75.0 } },
+  "Assam":             { cityKey: "kolkata",     name: "Assam",                  off: { max: -7.0, min: -3.0, rain: 85.0 } },
+  "Meghalaya":         { cityKey: "kolkata",     name: "Meghalaya",              off: { max: -12.0, min: -6.0, rain: 95.0 } },
+  "Jammu & Kashmir":   { cityKey: "all",         name: "Jammu & Kashmir",        off: { max: -16.0, min: -16.0, rain: -10.0 } },
+  "Himachal Pradesh":  { cityKey: "all",         name: "Himachal Pradesh",       off: { max: -12.0, min: -12.0, rain: 15.0 } },
+  "Uttarakhand":       { cityKey: "delhi",       name: "Uttarakhand",            off: { max: -8.0, min: -8.0, rain: 25.0 } },
+  "Punjab":            { cityKey: "delhi",       name: "Punjab",                 off: { max: 2.0,  min: 1.0, rain: -8.0 } },
+  "Haryana":           { cityKey: "delhi",       name: "Haryana",                off: { max: 2.5,  min: 1.2, rain: -6.0 } },
+  "Uttar Pradesh":     { cityKey: "delhi",       name: "Uttar Pradesh",          off: { max: 1.0,  min: 0.5, rain: 12.0 } },
+  "Bihar":             { cityKey: "kolkata",     name: "Bihar",                  off: { max: 0.0,  min: 0.0, rain: 20.0 } },
+  "Jharkhand":         { cityKey: "kolkata",     name: "Jharkhand",              off: { max: -2.0, min: -1.0, rain: 28.0 } },
+  "Madhya Pradesh":    { cityKey: "ahmedabad",   name: "Madhya Pradesh",         off: { max: 1.5,  min: 0.5, rain: 5.0 } },
+  "Chhattisgarh":      { cityKey: "bhubaneswar", name: "Chhattisgarh",           off: { max: -1.0, min: -0.5, rain: 30.0 } },
+  "Goa":               { cityKey: "mumbai",      name: "Goa",                    off: { max: -7.0, min: -1.0, rain: 65.0 } },
+  "Andhra Pradesh":    { cityKey: "chennai",     name: "Andhra Pradesh",         off: { max: 1.0,  min: 0.0, rain: 18.0 } },
+  "Telangana":         { cityKey: "bengaluru",   name: "Telangana",              off: { max: 2.0,  min: 0.5, rain: 8.0 } }
+};
+
+function getRealTimeStateAlerts() {
+  const alerts = [];
+  let idCount = 1;
+
+  // Use 7-day model forecast dataset
+  const baseForecast = (typeof activeForecastData !== "undefined" && activeForecastData)
+    ? activeForecastData
+    : (typeof FORECAST_7DAY_EXTENDED !== "undefined" ? FORECAST_7DAY_EXTENDED : []);
+
+  if (!baseForecast || baseForecast.length === 0) return [];
+
+  Object.entries(STATE_MODEL_MAP).forEach(([stateName, config]) => {
+    // Calculate 7-day predictions for this state using model offsets
+    const maxTemps = baseForecast.map(d => +(d.max_temp + config.off.max).toFixed(1));
+    const minTemps = baseForecast.map(d => +(d.min_temp + config.off.min).toFixed(1));
+    const rainfall = baseForecast.map(d => Math.max(0, +(d.rainfall + config.off.rain).toFixed(1)));
+
+    const peakMaxTemp = Math.max(...maxTemps);
+    const peakMinTemp = Math.min(...minTemps);
+    const peakRain24h = Math.max(...rainfall);
+    const totalRain7d = +(rainfall.reduce((a, b) => a + b, 0)).toFixed(1);
+
+    const peakHeatIdx = maxTemps.indexOf(peakMaxTemp);
+    const peakRainIdx = rainfall.indexOf(peakRain24h);
+
+    const peakHeatDay = baseForecast[peakHeatIdx] || baseForecast[0];
+    const peakRainDay = baseForecast[peakRainIdx] || baseForecast[0];
+
+    // 1. HEAT WAVE ALERT (Requires 7-day peak max temp >= 40°C AND low rain)
+    if (peakMaxTemp >= 40 && totalRain7d < 15) {
+      const sev = peakMaxTemp >= 44 ? "critical" : peakMaxTemp >= 41.5 ? "high" : "moderate";
+      const status = peakHeatIdx <= 1 ? "active" : "upcoming";
+      alerts.push({
+        id: `ALT-7D-${String(idCount++).padStart(3, '0')}`,
+        state: stateName,
+        city: `${config.name}`,
+        type: peakMaxTemp >= 44 ? "Severe Heat Wave Red Alert" : "Heat Wave Warning",
+        severity: sev,
+        status: status,
+        icon: "🔥",
+        states: [stateName],
+        dates: `Predicted Peak: ${peakHeatDay.dateLabel || peakHeatDay.dateISO}`,
+        detail: `7-Day LightGBM Model predicts peak temperature of ${peakMaxTemp}°C in ${stateName} on ${peakHeatDay.dateLabel}. 7-day accumulated rainfall: ${totalRain7d} mm. High thermal stress expected.`,
+        dos: [
+          "Stay indoors during peak solar hours (11 AM – 4 PM)",
+          "Drink water or ORS every 30 minutes to prevent heat stroke",
+          "Wear light, loose cotton clothing",
+          "Keep emergency cooling & hydration supplies ready"
+        ],
+        donts: [
+          "Do not engage in heavy outdoor physical labor during noon",
+          "Never leave children or pets inside parked vehicles",
+          "Avoid alcoholic and caffeinated beverages during heat waves"
+        ]
+      });
+    }
+
+    // 2. MONSOON HEAVY RAINFALL & FLOOD ALERT (Requires peak 24h rain >= 25mm OR total 7d rain >= 60mm)
+    if (peakRain24h >= 25 || totalRain7d >= 60) {
+      const sev = peakRain24h >= 70 ? "critical" : peakRain24h >= 40 ? "high" : "moderate";
+      const status = peakRainIdx <= 1 ? "active" : "upcoming";
+      alerts.push({
+        id: `ALT-7D-${String(idCount++).padStart(3, '0')}`,
+        state: stateName,
+        city: `${config.name}`,
+        type: peakRain24h >= 70 ? "Monsoon Torrential Flood Red Alert" : "Heavy Rainfall Warning",
+        severity: sev,
+        status: status,
+        icon: peakRain24h >= 70 ? "🌀" : "⛈️",
+        states: [stateName],
+        dates: `Predicted Peak Downpour: ${peakRainDay.dateLabel || peakRainDay.dateISO}`,
+        detail: `7-Day XGBoost & LightGBM Model predicts peak 24h downpour of ${peakRain24h} mm in ${stateName} on ${peakRainDay.dateLabel}. Total 7-day predicted rainfall: ${totalRain7d} mm. Risk of flash flooding & waterlogging.`,
+        dos: [
+          "Move valuables & electrical appliances to higher floors",
+          "Avoid waterlogged underpasses and flooded roads",
+          "Keep emergency numbers saved & power banks fully charged",
+          "Follow local disaster management authority advisories"
+        ],
+        donts: [
+          "Do not enter flooded roads — even shallow currents are dangerous",
+          "Avoid walking near open drains, culverts and riverbanks",
+          "Don't touch fallen electrical wires or submerged poles"
+        ]
+      });
+    }
+
+    // 3. COLD WAVE & VALLEY FROST WARNING (Requires min temp <= 10°C)
+    if (peakMinTemp <= 10) {
+      const sev = peakMinTemp <= 5 ? "high" : "moderate";
+      alerts.push({
+        id: `ALT-7D-${String(idCount++).padStart(3, '0')}`,
+        state: stateName,
+        city: `${config.name}`,
+        type: "Cold Wave & Valley Frost Advisory",
+        severity: sev,
+        status: "active",
+        icon: "❄️",
+        states: [stateName],
+        dates: "7-Day Model Cold Wave Horizon",
+        detail: `7-Day Model predicts minimum temperature dropping to ${peakMinTemp}°C in ${stateName}. Cold wave conditions prevailing over hill and valley sectors.`,
+        dos: [
+          "Wear multi-layered thermal clothing when stepping outdoors",
+          "Keep living spaces warm and well insulated",
+          "Consume warm fluids and nutrient-rich warm food"
+        ],
+        donts: [
+          "Avoid prolonged exposure to cold winds without thermal gear",
+          "Don't use unvented coal heaters inside closed bedrooms"
+        ]
+      });
+    }
+
+    // 4. PRE-MONSOON SQUALL & THUNDERSHOWER WATCH (Moderate rain 10-25mm and warm temp)
+    if (peakRain24h >= 10 && peakRain24h < 25 && peakMaxTemp < 38) {
+      alerts.push({
+        id: `ALT-7D-${String(idCount++).padStart(3, '0')}`,
+        state: stateName,
+        city: `${config.name}`,
+        type: "Pre-Monsoon Convective Thundershower Watch",
+        severity: "moderate",
+        status: peakRainIdx <= 1 ? "active" : "upcoming",
+        icon: "🌩️",
+        states: [stateName],
+        dates: `Expected: ${peakRainDay.dateLabel || peakRainDay.dateISO}`,
+        detail: `7-Day Convective Model predicts afternoon thundershowers with peak 24h rainfall of ${peakRain24h} mm in ${stateName} on ${peakRainDay.dateLabel}.`,
+        dos: [
+          "Seek shelter inside sturdy buildings during lightning strikes",
+          "Unplug sensitive electronic appliances",
+          "Stay clear of tall trees and metal structures"
+        ],
+        donts: [
+          "Don't take shelter under solitary trees during thunderstorms",
+          "Avoid using corded phones or metallic objects outdoors"
+        ]
+      });
+    }
+  });
+
+  return alerts;
+}
+
 function initAlertsPage() {
+  populateStateFilterDropdown();
   updateAlertStats();
   renderAlertCards();
   bindAlertFilters();
   lucide.createIcons();
 }
 
+function populateStateFilterDropdown() {
+  const select = document.getElementById("alert-state-select");
+  if (!select || select.children.length > 1) return;
+
+  const weatherMap = (typeof STATE_WEATHER !== "undefined" && STATE_WEATHER) ? STATE_WEATHER : {};
+  const states = Object.keys(weatherMap).sort();
+
+  states.forEach(st => {
+    const opt = document.createElement("option");
+    opt.value = st;
+    opt.textContent = `📍 ${st}`;
+    select.appendChild(opt);
+  });
+}
+
 function updateAlertStats() {
+  const allAlerts = getRealTimeStateAlerts();
   const counts = { critical: 0, high: 0, moderate: 0, low: 0 };
-  ALERTS_FULL.forEach(a => { if (counts[a.severity] !== undefined) counts[a.severity]++; });
+  allAlerts.forEach(a => { if (counts[a.severity] !== undefined) counts[a.severity]++; });
+
   setText("stat-critical", counts.critical);
   setText("stat-high", counts.high);
   setText("stat-moderate", counts.moderate);
   setText("stat-low", counts.low);
-  setText("nav-alerts-badge", ALERTS_FULL.filter(a => a.status === "active").length);
-  setText("alert-count", ALERTS_FULL.filter(a => a.status === "active").length);
+
+  const activeCount = allAlerts.filter(a => a.status === "active").length;
+  setText("nav-alerts-badge", activeCount);
+  setText("alert-count", activeCount);
 }
 
 function renderAlertCards() {
   const container = document.getElementById("alert-cards-list");
   if (!container) return;
 
-  let alerts = ALERTS_FULL;
+  let alerts = getRealTimeStateAlerts();
 
-  if (alertFilterStatus !== "all") alerts = alerts.filter(a => a.status === alertFilterStatus);
-  if (alertFilterSev !== "all") alerts = alerts.filter(a => a.severity === alertFilterSev);
+  // Status Filter
+  if (alertFilterStatus !== "all") {
+    alerts = alerts.filter(a => a.status === alertFilterStatus);
+  }
+
+  // Severity Filter
+  if (alertFilterSev !== "all") {
+    alerts = alerts.filter(a => a.severity === alertFilterSev);
+  }
+
+  // State Filter
+  if (alertFilterState !== "all") {
+    alerts = alerts.filter(a => a.state === alertFilterState || (a.states && a.states.includes(alertFilterState)));
+  }
+
+  // Search Query Filter
+  if (alertSearchQuery.trim() !== "") {
+    const q = alertSearchQuery.toLowerCase();
+    alerts = alerts.filter(a =>
+      a.type.toLowerCase().includes(q) ||
+      a.city.toLowerCase().includes(q) ||
+      (a.state && a.state.toLowerCase().includes(q)) ||
+      a.detail.toLowerCase().includes(q)
+    );
+  }
 
   if (alerts.length === 0) {
     container.innerHTML = `
       <div style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px">
         <div style="font-size:40px;margin-bottom:12px">🔍</div>
-        No alerts match the selected filters.
+        No state alerts match the selected state or filters.
       </div>`;
     return;
   }
@@ -797,8 +1012,8 @@ function renderAlertCards() {
           <div class="alert-emoji">${a.icon}</div>
           <div>
             <div class="alert-card-title">${a.type}</div>
-            <div class="alert-card-city">${a.city}</div>
-            <div class="alert-card-states">${a.states.join(" · ")}</div>
+            <div class="alert-card-city">📍 ${a.city}</div>
+            <div class="alert-card-states">${a.states ? a.states.join(" · ") : a.state}</div>
           </div>
         </div>
         <div class="alert-badges">
@@ -829,6 +1044,24 @@ function renderAlertCards() {
 }
 
 function bindAlertFilters() {
+  // State filter dropdown
+  const stateSelect = document.getElementById("alert-state-select");
+  if (stateSelect) {
+    stateSelect.addEventListener("change", e => {
+      alertFilterState = e.target.value;
+      renderAlertCards();
+    });
+  }
+
+  // Search input filter
+  const searchInput = document.getElementById("alert-search-input");
+  if (searchInput) {
+    searchInput.addEventListener("input", e => {
+      alertSearchQuery = e.target.value;
+      renderAlertCards();
+    });
+  }
+
   // Status filters
   document.querySelectorAll("[data-filter-status]").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -851,7 +1084,8 @@ function bindAlertFilters() {
 }
 
 function updateAlertsNavBadge() {
-  const active = ALERTS_FULL.filter(a => a.status === "active").length;
+  const allAlerts = getRealTimeStateAlerts();
+  const active = allAlerts.filter(a => a.status === "active").length;
   setText("nav-alerts-badge", active);
   setText("alert-count", active);
 }
@@ -868,15 +1102,25 @@ function initReportsPage() {
 function renderReportData(cityKey, dateISO) {
   reportCityKey = cityKey;
 
-  const off = CITY_FORECAST_DATA[cityKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 };
-  const s = CLIMATE_DATA.all_india_summary;
-  const day0 = FORECAST_7DAY_EXTENDED[0];
+  const values = (typeof getCityModelValues === "function")
+    ? getCityModelValues(cityKey)
+    : (() => {
+        const off = CITY_FORECAST_DATA[cityKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 };
+        const s = CLIMATE_DATA.all_india_summary;
+        return {
+          maxTemp: +(s.max_temp + off.max).toFixed(1),
+          minTemp: +(s.min_temp + (off.min || 0)).toFixed(1),
+          rainfall: Math.max(0, +(s.rainfall_24h + off.rain).toFixed(1)),
+          humidity: Math.max(0, Math.min(100, s.humidity + (off.hum || 0)))
+        };
+      })();
 
-  const adjMax = +(s.max_temp + off.max).toFixed(1);
-  const adjMin = +(s.min_temp + (off.min || 0)).toFixed(1);
-  const adjRain = Math.max(0, +(s.rainfall_24h + off.rain).toFixed(1));
-  const adjHum = Math.max(0, Math.min(100, s.humidity + (off.hum || 0)));
-  const adjWind = Math.max(0, day0.wind_speed + Math.round(off.max * 0.4));
+  const day0 = FORECAST_7DAY_EXTENDED[0];
+  const adjMax = values.maxTemp;
+  const adjMin = values.minTemp;
+  const adjRain = values.rainfall;
+  const adjHum = values.humidity;
+  const adjWind = values.windSpeed || Math.max(0, day0.wind_speed + Math.round((values.maxTemp - 30) * 0.4));
   const cond = getConditionFromData(adjMax, adjRain);
 
   // Header date tag
@@ -884,7 +1128,7 @@ function renderReportData(cityKey, dateISO) {
   const dateLabel = dateObj.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
   setText("report-date-tag", dateLabel);
 
-  // KPIs
+  // KPIs — exactly matching Dashboard page metrics!
   setText("rep-max-val", `${adjMax}°C`);
   setText("rep-min-val", `${adjMin}°C`);
   setText("rep-rain-val", `${adjRain} mm`);
@@ -892,16 +1136,50 @@ function renderReportData(cityKey, dateISO) {
   setText("rep-wind-val", `${adjWind} km/h`);
   setText("rep-cond-val", cond.icon + " " + cond.label);
 
-  // AI Summary
-  const summary = REPORT_SUMMARIES[cityKey] || REPORT_SUMMARIES["all"];
+  // Dynamic AI Summary based on 7-Day Model Predictions
+  const summary = generateDynamicAISummary(cityKey);
   const aiEl = document.getElementById("ai-summary-text");
   if (aiEl) {
     aiEl.innerHTML = "";
-    typewriterEffect(aiEl, summary, 12);
+    typewriterEffect(aiEl, summary, 10);
   }
 
   // Charts
   renderReportCharts(cityKey);
+}
+
+function generateDynamicAISummary(cityKey) {
+  const trend = getCityWeeklyTrend(cityKey);
+  const cityNames = {
+    all: "All India",
+    ahmedabad: "Ahmedabad",
+    delhi: "New Delhi",
+    mumbai: "Mumbai",
+    chennai: "Chennai",
+    kolkata: "Kolkata",
+    bengaluru: "Bengaluru",
+    jaipur: "Jaipur",
+    bhubaneswar: "Bhubaneswar"
+  };
+  const cityName = cityNames[cityKey] || "the selected region";
+
+  const peakMax = Math.max(...trend.maxTemps);
+  const peakMin = Math.min(...trend.minTemps);
+  const totalRain = +(trend.rainfall.reduce((a, b) => a + b, 0)).toFixed(1);
+  const peakRain = Math.max(...trend.rainfall);
+  const rainyDays = trend.rainfall.filter(r => r > 0).length;
+
+  if (peakMax >= 40 && totalRain < 15) {
+    return `${cityName} is projecting severe heat wave conditions over the 7-day forecast horizon. LightGBM thermal inference indicates maximum temperatures peaking at ${peakMax}°C with minimal rainfall (${totalRain} mm across 7 days). High thermal stress levels require hydration protocols and limited outdoor activity during peak solar hours.`;
+  } else if (totalRain >= 50 || peakRain >= 40) {
+    return `${cityName} is experiencing active monsoon precipitation with a 7-day cumulative rainfall forecast of ${totalRain} mm (peak 24h intensity of ${peakRain} mm across ${rainyDays} rainy days). XGBoost & LightGBM 2-stage models indicate low-lying waterlogging and urban inundation risks. Maximum temperatures will remain moderated around ${peakMax}°C.`;
+  } else if (totalRain >= 15) {
+    return `${cityName} exhibits pre-monsoon convective activity with scattered showers over the next 7 days. Total accumulated rainfall is projected at ${totalRain} mm with peak 24h rain reaching ${peakRain} mm. Temperatures remain comfortable to warm, ranging between ${peakMin}°C (min) and ${peakMax}°C (max).`;
+  } else if (peakMin <= 15) {
+    return `${cityName} indicates cool to cold wave conditions over the valley/hill sector. Minimum temperatures are predicted to drop to ${peakMin}°C while peak daily highs stay near ${peakMax}°C. Total 7-day precipitation remains light at ${totalRain} mm. Thermal insulation and warm fluids recommended.`;
+  } else {
+    return `${cityName} demonstrates stable atmospheric conditions over the 7-day forecast period. Maximum temperatures are projected to average ${peakMax}°C with overnight lows around ${peakMin}°C. 7-day cumulative rainfall is estimated at ${totalRain} mm. No extreme meteorological hazards detected by the ISRO RIT ML fusion engine.`;
+  }
 }
 
 function typewriterEffect(el, text, speed) {
@@ -965,13 +1243,24 @@ function downloadReportPDF() {
     const cityEl = document.getElementById("report-city-select");
     const cityLbl = cityEl?.options[cityEl.selectedIndex]?.text || "All India";
 
-    const off = CITY_FORECAST_DATA[reportCityKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 };
-    const s = CLIMATE_DATA.all_india_summary;
-    const adjMax = +(s.max_temp + off.max).toFixed(1);
-    const adjMin = +(s.min_temp + (off.min || 0)).toFixed(1);
-    const adjRain = Math.max(0, +(s.rainfall_24h + off.rain).toFixed(1));
-    const adjHum = Math.max(0, Math.min(100, s.humidity + (off.hum || 0)));
-    const summary = REPORT_SUMMARIES[reportCityKey] || REPORT_SUMMARIES["all"];
+    const values = (typeof getCityModelValues === "function")
+      ? getCityModelValues(reportCityKey)
+      : (() => {
+          const off = CITY_FORECAST_DATA[reportCityKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 };
+          const s = CLIMATE_DATA.all_india_summary;
+          return {
+            maxTemp: +(s.max_temp + off.max).toFixed(1),
+            minTemp: +(s.min_temp + (off.min || 0)).toFixed(1),
+            rainfall: Math.max(0, +(s.rainfall_24h + off.rain).toFixed(1)),
+            humidity: Math.max(0, Math.min(100, s.humidity + (off.hum || 0)))
+          };
+        })();
+
+    const adjMax = values.maxTemp;
+    const adjMin = values.minTemp;
+    const adjRain = values.rainfall;
+    const adjHum = values.humidity;
+    const summary = generateDynamicAISummary(reportCityKey);
 
     const printWin = window.open("", "_blank", "width=900,height=700");
     printWin.document.write(`
@@ -994,7 +1283,7 @@ function downloadReportPDF() {
         </style>
       </head>
       <body>
-        <h1>🛰️ RIT — Climate Report <span class="badge">ISRO Hackathon 2025</span></h1>
+        <h1>🛰️ RIT — Climate Report</h1>
         <div class="meta">
           <strong>Region:</strong> ${cityLbl} &nbsp;|&nbsp;
           <strong>Date:</strong> ${dateStr} &nbsp;|&nbsp;
@@ -1013,7 +1302,7 @@ function downloadReportPDF() {
         <div class="footer">
           Data Sources: ISRO INSAT-3D/3DR · IMD 0.25° Grid · MOSDAC · Bhuvan Geoportal &nbsp;|&nbsp;
           This report contains AI-generated mock data for demonstration purposes. &nbsp;|&nbsp;
-          RIT v1.0 · ISRO Hackathon 2025
+          RIT v1.0 · ISRO Hackathon 2026
         </div>
         <script>window.onload = () => { window.print(); }<\/script>
       </body>

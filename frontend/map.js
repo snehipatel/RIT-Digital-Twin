@@ -72,7 +72,7 @@ const STATE_WEATHER = {
   "Tripura": { maxTemp: 30, minTemp: 22, rainfall: 65, cloud: 0.74, hasRain: true, hasWind: true },
   "Arunachal Pradesh": { maxTemp: 22, minTemp: 14, rainfall: 58, cloud: 0.70, hasRain: true, hasWind: true },
   "Sikkim": { maxTemp: 20, minTemp: 12, rainfall: 55, cloud: 0.68, hasRain: true, hasWind: true },
-  "Gujarat": { maxTemp: 40, minTemp: 27, rainfall: 9, cloud: 0.20, hasRain: false, hasWind: true },
+  "Gujarat": { maxTemp: 32, minTemp: 26, rainfall: 18, cloud: 0.55, hasRain: true, hasWind: true },
   "Maharashtra": { maxTemp: 32, minTemp: 23, rainfall: 72, cloud: 0.80, hasRain: true, hasWind: true },
   "Goa": { maxTemp: 30, minTemp: 23, rainfall: 88, cloud: 0.89, hasRain: true, hasWind: true },
   "Karnataka": { maxTemp: 31, minTemp: 22, rainfall: 75, cloud: 0.82, hasRain: true, hasWind: true },
