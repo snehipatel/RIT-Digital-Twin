@@ -28,6 +28,18 @@
 </head>
 
 <body>
+  <!-- ══════════ AMBIENT SCREEN-EDGE WEATHER FX CANVASES & FLAME VIDEO ══════════ -->
+  <canvas id="ambient-canvas-left" class="ambient-canvas"></canvas>
+  <canvas id="ambient-canvas-right" class="ambient-canvas"></canvas>
+
+  <div id="ambient-flame-left" class="ambient-flame-container left">
+    <video class="ambient-flame-video" src="Flames.mp4" autoplay loop muted playsinline></video>
+  </div>
+  <div id="ambient-flame-right" class="ambient-flame-container right">
+    <video class="ambient-flame-video" src="Flames.mp4" autoplay loop muted playsinline></video>
+  </div>
+
+  <audio id="ambient-thunder-audio" src="Thunderstorm.mp3" loop preload="auto"></audio>
 
   <!-- ══════════ TOP NAV ══════════ -->
   <nav class="topnav" id="topnav">
@@ -94,6 +106,10 @@
         <span>LIVE · <span id="last-updated">just now</span></span>
       </div>
       <div class="nav-date" id="nav-date">—</div>
+      <button class="nav-btn sound-toggle-btn" id="sound-toggle-btn" title="Toggle Ambient Weather Sound"
+        onclick="toggleAmbientSound()">
+        <i data-lucide="volume-x" size="16"></i>
+      </button>
       <button class="nav-btn" id="btn-refresh" title="Refresh Data">
         <i data-lucide="refresh-cw" size="16"></i>
       </button>
@@ -520,91 +536,6 @@
             <canvas id="forecastRainChart"></canvas>
           </div>
         </div>
-
-        <!-- Climate Awareness Section -->
-        <div class="climate-awareness-card glass-card">
-          <div class="panel-header">
-            <span class="panel-title"><i data-lucide="leaf" size="16"></i> How You Can Help the Climate</span>
-            <span class="model-tag">Responsible Citizenship</span>
-          </div>
-          <p class="awareness-intro">Small actions by individuals add up to meaningful change. Here are simple steps
-            every responsible citizen can take to fight climate change and global warming.</p>
-          <div class="awareness-grid">
-            <div class="awareness-card-item">
-              <div class="awareness-icon">💡</div>
-              <div class="awareness-content">
-                <div class="awareness-title">Save Electricity</div>
-                <div class="awareness-desc">Turn off lights, fans, and appliances when not in use. Switch to LED bulbs
-                  and energy-efficient devices to reduce carbon emissions.</div>
-              </div>
-            </div>
-            <div class="awareness-card-item">
-              <div class="awareness-icon">🚌</div>
-              <div class="awareness-content">
-                <div class="awareness-title">Use Public Transport</div>
-                <div class="awareness-desc">Opt for buses, metros, or shared rides. Cycle or walk for short distances to
-                  cut down vehicular pollution and CO₂ emissions.</div>
-              </div>
-            </div>
-            <div class="awareness-card-item">
-              <div class="awareness-icon">🌳</div>
-              <div class="awareness-content">
-                <div class="awareness-title">Plant &amp; Protect Trees</div>
-                <div class="awareness-desc">Trees absorb CO₂ and produce oxygen. Plant saplings, protect existing trees,
-                  and support afforestation drives in your community.</div>
-              </div>
-            </div>
-            <div class="awareness-card-item">
-              <div class="awareness-icon">♻️</div>
-              <div class="awareness-content">
-                <div class="awareness-title">Reduce Plastic &amp; Recycle</div>
-                <div class="awareness-desc">Avoid single-use plastics, segregate waste, and recycle materials. Less
-                  waste in landfills means fewer greenhouse gas emissions.</div>
-              </div>
-            </div>
-            <div class="awareness-card-item">
-              <div class="awareness-icon">💧</div>
-              <div class="awareness-content">
-                <div class="awareness-title">Conserve Water</div>
-                <div class="awareness-desc">Fix leaky taps, take shorter showers, and reuse water where possible. Water
-                  conservation reduces the energy needed for water treatment.</div>
-              </div>
-            </div>
-            <div class="awareness-card-item">
-              <div class="awareness-icon">☀️</div>
-              <div class="awareness-content">
-                <div class="awareness-title">Support Renewable Energy</div>
-                <div class="awareness-desc">Choose solar panels or green energy plans when possible. Advocate for clean
-                  energy policies in your locality and workplace.</div>
-              </div>
-            </div>
-            <div class="awareness-card-item">
-              <div class="awareness-icon">🚫🔥</div>
-              <div class="awareness-content">
-                <div class="awareness-title">Avoid Burning Waste</div>
-                <div class="awareness-desc">Burning garbage, crop stubble, or leaves releases toxic gases. Use
-                  composting or proper disposal channels for waste management.</div>
-              </div>
-            </div>
-            <div class="awareness-card-item">
-              <div class="awareness-icon">📢</div>
-              <div class="awareness-content">
-                <div class="awareness-title">Spread Awareness</div>
-                <div class="awareness-desc">Share climate knowledge with family, friends, and on social media.
-                  Collective awareness is the first step toward collective action.</div>
-              </div>
-            </div>
-            <div class="awareness-card-item">
-              <div class="awareness-icon">🌱</div>
-              <div class="awareness-content">
-                <div class="awareness-title">Practice Sustainable Living</div>
-                <div class="awareness-desc">Choose local produce, reduce meat consumption, buy durable goods, and adopt
-                  a lifestyle that prioritises the planet's long-term health.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </div><!-- /page-forecast -->
 
 
@@ -643,7 +574,7 @@
             <span class="model-tag" id="prediction-model-tag">Connecting...</span>
           </div>
           <div class="prediction-controls-wrap">
-            
+
             <div class="prediction-timeline-col">
               <div class="year-slider-label">
                 <span>Timeline Year</span>
@@ -654,7 +585,8 @@
                   <i data-lucide="play" size="16"></i>
                   <span>Play Timeline</span>
                 </button>
-                <input type="range" min="2000" max="2100" value="2026" class="timeline-slider" id="prediction-year-slider" />
+                <input type="range" min="2000" max="2100" value="2026" class="timeline-slider"
+                  id="prediction-year-slider" />
               </div>
             </div>
 
@@ -699,15 +631,16 @@
         <!-- Climate Solutions Matrix Card -->
         <div class="glass-card panel-card" style="margin-bottom: 20px;" id="prediction-solutions-card">
           <div class="panel-header">
-            <span class="panel-title"><i data-lucide="shield-check" size="16"></i> Climate Solutions & Mitigation Matrix</span>
+            <span class="panel-title"><i data-lucide="shield-check" size="16"></i> Climate Solutions & Mitigation
+              Matrix</span>
             <span class="model-tag" id="solutions-active-count">0 Solutions Active</span>
           </div>
           <div class="solutions-layout-wrap">
-            
+
             <div class="solutions-grid-col">
               <span class="sub-section-title">Select Climate Actions to Implement:</span>
               <div class="solutions-options-grid">
-                
+
                 <div class="solution-checkbox-item" data-sol="trees">
                   <input type="checkbox" id="sol-trees" />
                   <label for="sol-trees">
@@ -718,7 +651,7 @@
                     </div>
                   </label>
                 </div>
-                
+
                 <div class="solution-checkbox-item" data-sol="solar">
                   <input type="checkbox" id="sol-solar" />
                   <label for="sol-solar">
@@ -881,7 +814,8 @@
               <div class="feedback-panel-inner" id="prediction-solutions-feedback">
                 <div class="feedback-empty-state">
                   <i data-lucide="info" size="24"></i>
-                  <p>Select one or more climate solutions to simulate their demographic and environmental offsets on future trajectories.</p>
+                  <p>Select one or more climate solutions to simulate their demographic and environmental offsets on
+                    future trajectories.</p>
                 </div>
               </div>
             </div>
@@ -936,7 +870,8 @@
         <!-- Prediction Chart Card -->
         <div class="chart-card glass-card">
           <div class="panel-header">
-            <span class="panel-title"><i data-lucide="trending-up" size="16"></i> 100-Year Climate Projection Trend (2000 - 2100)</span>
+            <span class="panel-title"><i data-lucide="trending-up" size="16"></i> 100-Year Climate Projection Trend
+              (2000 - 2100)</span>
             <span class="model-tag">CMIP6 Model Projections</span>
           </div>
           <div class="chart-wrap" style="height: 320px;">
@@ -969,6 +904,12 @@
               <option value="bhubaneswar">Bhubaneswar</option>
             </select>
             <input type="date" class="select-input compact-select" id="whatif-date-input" />
+            <div class="map-view-toggle-wrap">
+              <button class="map-toggle-btn active" id="whatif-map-live-btn" onclick="toggleWhatIfMapMode('live')">Live
+                Baseline</button>
+              <button class="map-toggle-btn" id="whatif-map-sim-btn" onclick="toggleWhatIfMapMode('sim')">Simulated
+                Scenario</button>
+            </div>
           </div>
         </div>
 
@@ -976,7 +917,7 @@
           <div class="panel-header">
             <span class="panel-title"><i data-lucide="flask-conical" size="16"></i> Scenario Engine — Parameter
               Controls</span>
-            <span class="model-tag">Scenario Engine</span>
+            <span class="model-tag" id="whatif-model-tag">Connecting...</span>
           </div>
 
           <div class="whatif-body">
@@ -1026,7 +967,7 @@
                 <div class="slider-track-labels"><span>280</span><span>640</span><span>1000 ppm</span></div>
               </div>
 
-              <button class="run-simulation-btn" id="run-sim-btn">
+              <button class="run-simulation-btn" id="run-sim-btn" onclick="runSimulation()">
                 <i data-lucide="play-circle" size="18"></i>
                 Run Simulation
               </button>
@@ -1038,11 +979,16 @@
                 <p>Adjust sliders and run simulation to see projected climate impacts</p>
               </div>
               <div class="results-grid" id="results-grid" style="display:none">
-                <!-- populated by JS -->
+                <!-- Tier 4 Narrative + Tier 1 ML Predictions populated by JS -->
               </div>
             </div>
           </div>
         </section>
+
+        <!-- Flowing Bottom Section: Tier 2 (Regional Cards - No Table) & Tier 3 (Digital Twin Consequences) -->
+        <div class="whatif-bottom-results" id="whatif-bottom-results" style="display:none">
+          <!-- Populated by JS -->
+        </div>
 
         <!-- Simulation Chart -->
         <div class="chart-card glass-card" id="whatif-chart-card" style="display:none">
@@ -1472,6 +1418,7 @@
   </div>
 
   <script src="data.js?v=3"></script>
+  <script src="ambient.js?v=3"></script>
   <script src="map.js?v=3"></script>
   <script src="charts.js?v=3"></script>
   <script src="whatif.js?v=3"></script>
