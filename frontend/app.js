@@ -14,41 +14,46 @@ async function bootSequence() {
   const steps   = ["ls-1","ls-2","ls-3","ls-4","ls-5"];
   const overlay = document.getElementById("loading-overlay");
 
-  for (let i = 0; i < steps.length; i++) {
-    await delay(450);
-    document.getElementById(steps[i])?.classList.add("active");
-    if (i > 0) document.getElementById(steps[i - 1])?.classList.add("done");
+  try {
+    for (let i = 0; i < steps.length; i++) {
+      await delay(250);
+      document.getElementById(steps[i])?.classList.add("active");
+      if (i > 0) document.getElementById(steps[i - 1])?.classList.add("done");
+    }
+
+    await delay(300);
+
+    // Load real model JSON artifacts if available
+    if (typeof loadRealModelData === "function") {
+      try { await loadRealModelData(); } catch (e) { console.warn("loadRealModelData error:", e); }
+    }
+
+    // Initialize all modules
+    if (typeof initMap === "function") try { initMap(); } catch (e) { console.warn("initMap error:", e); }
+    if (typeof initAllCharts === "function") try { initAllCharts(); } catch (e) { console.warn("initAllCharts error:", e); }
+    if (typeof populateKPIs === "function") try { populateKPIs(); } catch (e) { console.warn("populateKPIs error:", e); }
+    if (typeof initTimeline === "function") try { initTimeline(); } catch (e) { console.warn("initTimeline error:", e); }
+    if (typeof initEventHandlers === "function") try { initEventHandlers(); } catch (e) { console.warn("initEventHandlers error:", e); }
+    if (typeof updateNavDate === "function") try { updateNavDate(); } catch (e) {}
+    if (typeof updateLiveTime === "function") try { updateLiveTime(); } catch (e) {}
+
+    // Multi-page navigation
+    if (typeof initNavigation === "function") try { initNavigation(); } catch (e) { console.warn("initNavigation error:", e); }
+    if (typeof renderDashboardComparison === "function") try { renderDashboardComparison(); } catch (e) {}
+
+    document.getElementById(steps[steps.length - 1])?.classList.add("done");
+    await delay(200);
+  } catch (err) {
+    console.error("Boot sequence error:", err);
+  } finally {
+    if (overlay) {
+      overlay.classList.add("hidden");
+      setTimeout(() => overlay.style.display = "none", 500);
+    }
+    if (typeof lucide !== "undefined" && lucide.createIcons) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
   }
-
-  await delay(500);
-
-  // Load real model JSON artifacts if available
-  if (typeof loadRealModelData === "function") {
-    await loadRealModelData();
-  }
-
-  // Initialize all modules
-  initMap();
-  initAllCharts();
-  populateKPIs();
-  initTimeline();
-  initEventHandlers();
-  updateNavDate();
-  updateLiveTime();
-
-  // Multi-page navigation
-  initNavigation();
-  renderDashboardComparison();
-
-  // Final loading step done
-  document.getElementById(steps[steps.length - 1])?.classList.add("done");
-  await delay(400);
-
-  overlay.classList.add("hidden");
-  setTimeout(() => overlay.style.display = "none", 700);
-
-  // Initialize Lucide icons after DOM is ready
-  lucide.createIcons();
 }
 
 const delay = ms => new Promise(r => setTimeout(r, ms));

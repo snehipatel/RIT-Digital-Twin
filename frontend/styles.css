@@ -2162,6 +2162,23 @@ body::before {
   color: var(--text-primary);
 }
 
+.alert-select-control, .alert-search-control {
+  background: rgba(13, 22, 40, 0.85);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 11px;
+  padding: 5px 10px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.alert-select-control:focus, .alert-search-control:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.25);
+}
+
 .filter-btn.active {
   background: rgba(0, 212, 255, 0.1);
   border-color: rgba(0, 212, 255, 0.3);
