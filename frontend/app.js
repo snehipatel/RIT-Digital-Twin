@@ -104,6 +104,7 @@ function populateKPIs(cityKey) {
 function animateKPI(id, target, unit, durationMs, isPercent) {
   const el = document.getElementById(id);
   if (!el) return;
+  el.classList.remove("skeleton-shimmer");
   const start    = performance.now();
   const startVal = 0;
 
@@ -223,6 +224,23 @@ function initEventHandlers() {
 function updateKPIsForRegion(regionKey) {
   populateKPIs(regionKey);
   updateDashboardComparison(regionKey);
+
+  // Sync ambient screen-edge weather FX dynamically to selected region
+  const values = typeof getCityModelValues === "function"
+    ? getCityModelValues(regionKey)
+    : (() => {
+        const off = regionKey ? (CITY_FORECAST_DATA[regionKey]?.offsets || { max: 0, min: 0, rain: 0, hum: 0 }) : { max: 0, min: 0, rain: 0, hum: 0 };
+        const s = CLIMATE_DATA.all_india_summary;
+        return {
+          maxTemp: +(s.max_temp + off.max).toFixed(1),
+          minTemp: +(s.min_temp + (off.min||0)).toFixed(1),
+          rainfall: Math.max(0, +(s.rainfall_24h + off.rain).toFixed(1))
+        };
+      })();
+
+  if (typeof updateAmbientWeatherState === "function") {
+    updateAmbientWeatherState(values.maxTemp, values.minTemp, values.rainfall);
+  }
 }
 
 function updateForecastForDate(dateStr) {
