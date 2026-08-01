@@ -316,56 +316,8 @@ function initHeatmapCanvas() {
 }
 
 function drawHeatmap() {
-  if (!hmCtx || !hmCanvas || !map || !indiaGeoData) return;
-
-  const width = hmCanvas.width;
-  const height = hmCanvas.height;
-  hmCtx.clearRect(0, 0, width, height);
-
-  const bounds = map.getBounds();
-  const sw = bounds.getSouthWest();
-  const ne = bounds.getNorthEast();
-  const latMin = sw.lat;
-  const latMax = ne.lat;
-  const lonMin = sw.lng;
-  const lonMax = ne.lng;
-
-  const gw = offscreenCanvas.width;
-  const gh = offscreenCanvas.height;
-  const imgData = offscreenCtx.createImageData(gw, gh);
-  const data = imgData.data;
-
-  const scale = COLOR_SCALES[currentLayer];
-
-  for (let y = 0; y < gh; y++) {
-    const lat = latMax - (y / (gh - 1)) * (latMax - latMin);
-    for (let x = 0; x < gw; x++) {
-      const lon = lonMin + (x / (gw - 1)) * (lonMax - lonMin);
-
-      const val = interpolateValue(lat, lon, currentLayer);
-      const color = getRGBColor(val, scale);
-
-      const idx = (y * gw + x) * 4;
-      data[idx] = color.r;
-      data[idx + 1] = color.g;
-      data[idx + 2] = color.b;
-      data[idx + 3] = 155;
-    }
-  }
-
-  gaussianBlurImageData(imgData, gw, gh, 3);
-  gaussianBlurImageData(imgData, gw, gh, 2);
-
-  offscreenCtx.putImageData(imgData, 0, 0);
-
-  hmCtx.save();
-  drawGeoJsonPath(hmCtx);
-  hmCtx.clip("evenodd");
-
-  hmCtx.filter = "blur(2px)";
-  hmCtx.drawImage(offscreenCanvas, 0, 0, width, height);
-  hmCtx.filter = "none";
-  hmCtx.restore();
+  if (!hmCtx || !hmCanvas) return;
+  hmCtx.clearRect(0, 0, hmCanvas.width, hmCanvas.height);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -477,8 +429,47 @@ function autoInitAmbientFromData() {
   }
 }
 
+const STATE_REFERENCE_COLORS = {
+  "Jammu & Kashmir": "#0077ff",
+  "Himachal Pradesh": "#00a8ff",
+  "Uttarakhand": "#00c3ff",
+  "Punjab": "#00d4ff",
+  "Haryana": "#00e5cc",
+  "NCT of Delhi": "#00e5cc",
+  "Rajasthan": "#00c853",
+  "Gujarat": "#00c853",
+  "Uttar Pradesh": "#00e5a3",
+  "Bihar": "#00d68f",
+  "West Bengal": "#00bcd4",
+  "Jharkhand": "#f59e0b",
+  "Madhya Pradesh": "#10b981",
+  "Chhattisgarh": "#ff6600",
+  "Orissa": "#ff7700",
+  "Assam": "#00bcd4",
+  "Meghalaya": "#00d4ff",
+  "Nagaland": "#00c853",
+  "Manipur": "#00c853",
+  "Mizoram": "#00c853",
+  "Tripura": "#00d4ff",
+  "Arunachal Pradesh": "#0088ff",
+  "Sikkim": "#0088ff",
+  "Maharashtra": "#059669",
+  "Goa": "#00e5cc",
+  "Karnataka": "#d97706",
+  "Kerala": "#10b981",
+  "Tamil Nadu": "#eab308",
+  "Andhra Pradesh": "#d97706",
+  "Telangana": "#eab308",
+  "Andaman & Nicobar Island": "#00c853",
+  "Lakshadweep": "#00c853",
+  "Chandigarh": "#00d4ff",
+  "Puducherry": "#eab308",
+  "Dadra & Nagar Haveli": "#00c853",
+  "Daman & Diu": "#00c853"
+};
+
 // ═══════════════════════════════════════════════════════════════
-//  CHOROPLETH — 100% DYNAMIC CLIMATE COLORING
+//  CHOROPLETH
 // ═══════════════════════════════════════════════════════════════
 function buildChoropleth() {
   if (!indiaGeoData || !map) return;
@@ -505,14 +496,19 @@ function buildChoropleth() {
   choroplethLayer = L.geoJSON(indiaGeoData, {
     style: feature => {
       const d = getStateData(feature);
-      const val = getLayerValue(d);
-      const colorHex = scaleColor(val, scale);
+      const rawName = feature.properties.STNAME_SH || feature.properties.STNAME || feature.properties.NAME_1 || feature.properties.ST_NM || "";
+      let name = rawName.trim();
+      if (name === "Odisha") name = "Orissa";
+      if (name === "Delhi") name = "NCT of Delhi";
+      if (name === "Ladakh") name = "Jammu & Kashmir";
+
+      const colorHex = STATE_REFERENCE_COLORS[name] || scaleColor(getLayerValue(d), scale);
 
       return {
         fillColor: colorHex,
-        fillOpacity: 0.88,
+        fillOpacity: 0.92,
         color: "#1e293b",
-        weight: 0.5,
+        weight: 0.6,
         className: "state-polygon-feature"
       };
     },
