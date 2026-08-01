@@ -291,7 +291,7 @@ function initHeatmapCanvas() {
   hmCanvas.style.cssText = `
     position:absolute; top:0; left:0;
     width:100%; height:100%;
-    pointer-events:none; z-index:390;
+    pointer-events:none; z-index:410;
   `;
   mapCtr.appendChild(hmCanvas);
   hmCtx = hmCanvas.getContext("2d");
@@ -490,19 +490,6 @@ function buildChoropleth() {
 
   const scale = COLOR_SCALES[currentLayer];
 
-  // 1. 3D EXTRUSION BASE SHADOW LAYER (creates 3D raised block effect under India)
-  const shadowLayer = L.geoJSON(indiaGeoData, {
-    style: {
-      fillColor: "#020814",
-      fillOpacity: 0.95,
-      color: "rgba(0,0,0,0.9)",
-      weight: 16,
-      className: "india-3d-shadow"
-    },
-    interactive: false
-  }).addTo(map);
-  window._glowLayers.push(shadowLayer);
-
   choroplethLayer = L.geoJSON(indiaGeoData, {
     style: feature => {
       const d = getStateData(feature);
@@ -513,7 +500,7 @@ function buildChoropleth() {
         fillColor: colorHex,
         fillOpacity: 0.05,
         color: "#1e293b",
-        weight: 0.5,
+        weight: 0.8,
         className: "state-polygon-feature"
       };
     },
@@ -569,18 +556,7 @@ function buildChoropleth() {
     }
   }).addTo(map);
 
-  // CRISP STATE BORDER OVERLAY — renders high-definition state dividing lines on top
-  const borderOverlay = L.geoJSON(indiaGeoData, {
-    style: {
-      fill: false,
-      fillOpacity: 0,
-      color: "rgba(255, 255, 255, 0.75)",
-      weight: 1.2,
-      opacity: 0.85
-    },
-    interactive: false
-  }).addTo(map);
-  window._glowLayers.push(borderOverlay);
+  // ALL STATE GLOW & BLOOM LAYERS REMOVED
 }
 
 // ═══════════════════════════════════════════════════════════════

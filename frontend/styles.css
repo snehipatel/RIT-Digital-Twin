@@ -835,18 +835,7 @@ body::before {
 }
 
 .map-container-rel .leaflet-tile-pane {
-  filter: brightness(0.52) contrast(1.25) saturate(0.80);
-}
-
-/* Premium national outline — soft ambient cyan glow */
-.india-premium-outline {
-  filter: drop-shadow(0 0 18px rgba(89, 245, 255, 0.35)) drop-shadow(0 0 5px rgba(89, 245, 255, 0.20));
-}
-
-/* IMD raster temperature overlay — smooth anti-aliased rendering */
-.imd-raster-overlay {
-  image-rendering: auto;
-  filter: saturate(0.82) brightness(1.04);
+  filter: brightness(0.65) contrast(1.35) saturate(1.2) hue-rotate(-5deg);
 }
 
 /* ══ PREMIUM GLASSMORPHIC FLOATING HUD OVERLAYS ══
