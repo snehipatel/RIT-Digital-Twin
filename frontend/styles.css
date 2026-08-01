@@ -815,14 +815,15 @@ body::before {
   width: 100%;
   height: 100%;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  background: #060b18;
+  background: #020814;
   position: relative;
   overflow: hidden;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: perspective(1400px) rotateX(24deg) rotateZ(-3deg) scale(1.06);
+  transform-origin: 50% 50%;
 }
 
-/* Cinematic vignette + cool color grade over the raw tile layer —
-   pulls focus toward the landmass and matches the deep-space
-   backdrop of the reference art. Sits below the HUD/canvas layers. */
+/* Cinematic vignette + cool color grade over the raw tile layer */
 .map-container-rel::after {
   content: '';
   position: absolute;
@@ -835,12 +836,18 @@ body::before {
 }
 
 .map-container-rel .leaflet-tile-pane {
-  filter: brightness(0.65) contrast(1.35) saturate(1.2) hue-rotate(-5deg);
+  filter: brightness(0.60) contrast(1.4) saturate(1.25) hue-rotate(-5deg);
 }
 
-.india-3d-shadow {
-  transform: translate(6px, 8px) !important;
-  filter: drop-shadow(10px 14px 18px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 25px rgba(0, 212, 255, 0.45));
+/* 3D Vertical Side Wall Layers (creates physical extruded block thickness matching reference art) */
+.india-3d-wall-0 { transform: translate(2px, 3px) !important; }
+.india-3d-wall-1 { transform: translate(4px, 6px) !important; }
+.india-3d-wall-2 { transform: translate(6px, 9px) !important; }
+.india-3d-wall-3 { transform: translate(8px, 12px) !important; }
+.india-3d-wall-4 { transform: translate(10px, 15px) !important; }
+.india-3d-wall-5 {
+  transform: translate(12px, 18px) !important;
+  filter: drop-shadow(14px 20px 24px rgba(0, 0, 0, 0.98)) drop-shadow(0 0 40px rgba(0, 212, 255, 0.6));
 }
 
 /* ══ PREMIUM GLASSMORPHIC FLOATING HUD OVERLAYS ══

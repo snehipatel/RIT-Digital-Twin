@@ -487,18 +487,29 @@ function buildChoropleth() {
   if (window._glowLayers) window._glowLayers.forEach(l => map.removeLayer(l));
   window._glowLayers = [];
 
-  // 1. 3D EXTRUSION BASE SHADOW LAYER (creates 3D raised block effect under India)
-  const shadowLayer = L.geoJSON(indiaGeoData, {
-    style: {
-      fillColor: "#020814",
-      fillOpacity: 0.90,
-      color: "rgba(0,0,0,0.85)",
-      weight: 12,
-      className: "india-3d-shadow"
-    },
-    interactive: false
-  }).addTo(map);
-  window._glowLayers.push(shadowLayer);
+  // 1. 3D EXTRUDED VERTICAL BLOCK SIDE WALLS (6-layer offset depth creating 18px extruded block thickness)
+  const wallOffsets = [
+    { opacity: 0.95, color: "#010c22", weight: 3 },
+    { opacity: 0.90, color: "#021233", weight: 3 },
+    { opacity: 0.85, color: "#031a44", weight: 3 },
+    { opacity: 0.80, color: "#042255", weight: 3 },
+    { opacity: 0.75, color: "#052a66", weight: 3 },
+    { opacity: 0.70, color: "#000000", weight: 4 }
+  ];
+
+  wallOffsets.forEach((wall, idx) => {
+    const wallLayer = L.geoJSON(indiaGeoData, {
+      style: {
+        fillColor: wall.color,
+        fillOpacity: wall.opacity,
+        color: "rgba(0, 212, 255, 0.45)",
+        weight: wall.weight,
+        className: `india-3d-wall-${idx}`
+      },
+      interactive: false
+    }).addTo(map);
+    window._glowLayers.push(wallLayer);
+  });
 
   choroplethLayer = L.geoJSON(indiaGeoData, {
     style: feature => {
