@@ -181,7 +181,7 @@ function updateTimelineStats(year) {
     </div>
     <div class="timeline-stat">
       <div class="ts-label">TREND VS 1951</div>
-      <div class="ts-value" style="color:#ff6b6b;font-size:16px">${(stats.avg_max_temp - 30.1) >= 0 ? "+" : ""}${(stats.avg_max_temp - 30.1).toFixed(1)}°C</div>
+      <div class="ts-value" style="color:#ff6b6b;font-size:16px">+${Math.max(0, +(stats.avg_max_temp - 30.1).toFixed(1))}°C</div>
       <div class="ts-unit">warming signal</div>
     </div>
   `;
