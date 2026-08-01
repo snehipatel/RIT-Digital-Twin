@@ -548,15 +548,7 @@ function buildChoropleth() {
     window._glowLayers.push(layer);
   });
 
-  // NATIONAL RIM-LIGHT — crisp high-definition 3D neon outline matching reference image
-  const borderStyles = [
-    { color: "#00f0ff", weight: 3.5, opacity: 0.95, className: "national-neon-rim" },
-    { color: "#ffffff", weight: 1.4, opacity: 1.0 },
-  ];
-  borderStyles.forEach(style => {
-    const l = L.geoJSON(indiaGeoData, { style: { ...style, fillOpacity: 0 } }).addTo(map);
-    window._glowLayers.push(l);
-  });
+  // NATIONAL RIM-LIGHT REMOVED
 }
 
 // ═══════════════════════════════════════════════════════════════

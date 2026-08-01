@@ -843,10 +843,6 @@ body::before {
   filter: drop-shadow(10px 14px 18px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 25px rgba(0, 212, 255, 0.45));
 }
 
-.national-neon-rim {
-  filter: drop-shadow(0 0 10px #00f0ff) drop-shadow(0 0 20px #00d4ff) drop-shadow(0 0 30px rgba(0, 212, 255, 0.6)) !important;
-}
-
 /* ══ PREMIUM GLASSMORPHIC FLOATING HUD OVERLAYS ══
    Frosted glass panels floating above the map with gradient
    borders, deep blur, inset highlights, and soft drop shadows */
