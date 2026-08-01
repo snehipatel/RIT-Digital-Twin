@@ -350,7 +350,7 @@ function drawHeatmap() {
       data[idx] = color.r;
       data[idx + 1] = color.g;
       data[idx + 2] = color.b;
-      data[idx + 3] = 235;
+      data[idx + 3] = 165;
     }
   }
 
@@ -364,6 +364,7 @@ function drawHeatmap() {
   hmCtx.clip("evenodd");
 
   hmCtx.filter = "blur(2px)";
+  hmCtx.globalCompositeOperation = "source-over";
   hmCtx.drawImage(offscreenCanvas, 0, 0, width, height);
   hmCtx.filter = "none";
   hmCtx.restore();
