@@ -317,7 +317,14 @@ function initHeatmapCanvas() {
   }
 
   window.addEventListener("resize", resize);
-  map.on("resize", resize);
+  map.on("resize load moveend zoomend viewreset", resize);
+  if (map.whenReady) {
+    map.whenReady(() => {
+      resize();
+      setTimeout(resize, 50);
+      setTimeout(resize, 200);
+    });
+  }
 
   const throttledDrawHeatmap = () => {
     if (_hmThrottleTimer) return;
@@ -553,7 +560,7 @@ function buildChoropleth() {
 
       return {
         fillColor: colorHex,
-        fillOpacity: 0.05,
+        fillOpacity: 0.75,
         color: "rgba(15, 23, 42, 0.95)",
         weight: 0.5,
         opacity: 1.0,
@@ -561,9 +568,9 @@ function buildChoropleth() {
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 1.2, color: "#ffffff", fillOpacity: 0.35 }));
+      layer.on("mouseover", () => layer.setStyle({ weight: 1.2, color: "#ffffff", fillOpacity: 0.90 }));
       layer.on("mouseout", () => {
-        layer.setStyle({ weight: 0.5, color: "rgba(15, 23, 42, 0.95)", fillOpacity: 0.05 });
+        layer.setStyle({ weight: 0.5, color: "rgba(15, 23, 42, 0.95)", fillOpacity: 0.75 });
       });
 
       const d = getStateData(feature);
