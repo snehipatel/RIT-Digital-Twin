@@ -363,11 +363,28 @@ function drawHeatmap() {
   drawGeoJsonPath(hmCtx);
   hmCtx.clip("evenodd");
 
+  // Pass 1: Natural Multiply Terrain Bake (bakes temperature colors into mountain ridges & satellite landmass)
   hmCtx.filter = "blur(2px)";
-  hmCtx.globalCompositeOperation = "soft-light";
+  hmCtx.globalCompositeOperation = "multiply";
+  hmCtx.globalAlpha = 0.90;
   hmCtx.drawImage(offscreenCanvas, 0, 0, width, height);
-  hmCtx.globalCompositeOperation = "source-over";
+
+  // Pass 2: Natural Overlay Shading (highlights mountain peaks, deserts & valleys)
+  hmCtx.globalCompositeOperation = "overlay";
+  hmCtx.globalAlpha = 0.65;
+  hmCtx.drawImage(offscreenCanvas, 0, 0, width, height);
+
   hmCtx.filter = "none";
+  hmCtx.globalCompositeOperation = "source-over";
+  hmCtx.globalAlpha = 1.0;
+  hmCtx.restore();
+
+  // Pass 3: CRISP 100% VISIBLE STATE BOUNDARY OVERLAY STROKE
+  hmCtx.save();
+  drawGeoJsonPath(hmCtx);
+  hmCtx.strokeStyle = "rgba(15, 23, 42, 0.95)";
+  hmCtx.lineWidth = 1.2;
+  hmCtx.stroke();
   hmCtx.restore();
 }
 
@@ -502,16 +519,16 @@ function buildChoropleth() {
       return {
         fillColor: colorHex,
         fillOpacity: 0.05,
-        color: "#1e293b",
-        weight: 0.5,
-        opacity: 0.9,
+        color: "rgba(15, 23, 42, 0.95)",
+        weight: 1.0,
+        opacity: 1.0,
         className: "state-polygon-feature"
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 1.5, color: "#ffffff", fillOpacity: 0.35 }));
+      layer.on("mouseover", () => layer.setStyle({ weight: 2.0, color: "#ffffff", fillOpacity: 0.35 }));
       layer.on("mouseout", () => {
-        layer.setStyle({ weight: 0.5, color: "#1e293b", fillOpacity: 0.05 });
+        layer.setStyle({ weight: 1.0, color: "rgba(15, 23, 42, 0.95)", fillOpacity: 0.05 });
       });
 
       const d = getStateData(feature);
