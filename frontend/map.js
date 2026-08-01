@@ -550,15 +550,15 @@ function buildChoropleth() {
       return {
         fillColor: colorHex,
         fillOpacity: 0.92,
-        color: "rgba(2, 25, 45, 0.95)",
-        weight: 1.4,
+        color: "#222d3d",
+        weight: 0.6,
         className: "state-polygon-feature"
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 2.5, color: "#ffffff", fillOpacity: 1.0 }));
+      layer.on("mouseover", () => layer.setStyle({ weight: 1.8, color: "#ffffff", fillOpacity: 0.98 }));
       layer.on("mouseout", () => {
-        layer.setStyle({ weight: 1.4, color: "rgba(2, 25, 45, 0.95)", fillOpacity: 0.92 });
+        layer.setStyle({ weight: 0.6, color: "#222d3d", fillOpacity: 0.92 });
       });
 
       const d = getStateData(feature);
