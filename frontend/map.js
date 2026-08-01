@@ -401,20 +401,11 @@ function initMap() {
     minZoom: 4, maxZoom: 12,
   });
 
-  // Dark basemap with subtle terrain relief
+  // Dark basemap with subtle terrain relief (CartoDB Dark Matter — 100% Free & Fast)
   L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
     attribution: "© OpenStreetMap | © CartoDB | ISRO RIT",
     subdomains: "abcd", maxZoom: 19,
   }).addTo(map);
-
-  const terrainOverlay = L.tileLayer(
-    "https://tiles.stadiamaps.com/tiles/stamen_terrain_lines/{z}/{x}/{y}{r}.png", {
-      maxZoom: 18,
-      opacity: 0.07,
-      attribution: "© Stadia Maps"
-    }
-  );
-  terrainOverlay.addTo(map);
 
   initWeatherCanvas();
   initHeatmapCanvas();
