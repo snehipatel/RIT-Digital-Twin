@@ -412,10 +412,10 @@ function initMap() {
     minZoom: 4, maxZoom: 12,
   });
 
-  // Dark basemap with subtle terrain relief (CartoDB Dark Matter — 100% Free & Fast)
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution: "© OpenStreetMap | © CartoDB | ISRO RIT",
-    subdomains: "abcd", maxZoom: 19,
+  // Space Satellite Imagery Basemap (Esri World Imagery — HD Ocean & Terrain View)
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    attribution: "Esri World Imagery | ISRO RIT",
+    maxZoom: 19,
   }).addTo(map);
 
   initWeatherCanvas();
@@ -487,7 +487,18 @@ function buildChoropleth() {
   if (window._glowLayers) window._glowLayers.forEach(l => map.removeLayer(l));
   window._glowLayers = [];
 
-  const scale = COLOR_SCALES[currentLayer];
+  // 1. 3D EXTRUSION BASE SHADOW LAYER (creates 3D raised block effect under India)
+  const shadowLayer = L.geoJSON(indiaGeoData, {
+    style: {
+      fillColor: "#020814",
+      fillOpacity: 0.90,
+      color: "rgba(0,0,0,0.85)",
+      weight: 12,
+      className: "india-3d-shadow"
+    },
+    interactive: false
+  }).addTo(map);
+  window._glowLayers.push(shadowLayer);
 
   choroplethLayer = L.geoJSON(indiaGeoData, {
     style: feature => {
@@ -496,9 +507,9 @@ function buildChoropleth() {
       const isHot = d && d.maxTemp >= 38;
       return {
         fillColor: scaleColor(val, scale),
-        fillOpacity: 0.65,
-        color: isHot ? "rgba(255,107,53,0.85)" : "rgba(0,240,255,0.65)",
-        weight: isHot ? 1.8 : 1.1,
+        fillOpacity: 0.78,
+        color: isHot ? "rgba(255,107,53,0.9)" : "rgba(0,240,255,0.75)",
+        weight: isHot ? 2.0 : 1.2,
         className: isHot ? "hot-zone-glow" : "state-border-line"
       };
     },
