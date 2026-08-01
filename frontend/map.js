@@ -291,7 +291,7 @@ function initHeatmapCanvas() {
   hmCanvas.style.cssText = `
     position:absolute; top:0; left:0;
     width:100%; height:100%;
-    pointer-events:none; z-index:410;
+    pointer-events:none; z-index:390;
   `;
   mapCtr.appendChild(hmCanvas);
   hmCtx = hmCanvas.getContext("2d");
@@ -569,7 +569,18 @@ function buildChoropleth() {
     }
   }).addTo(map);
 
-  // ALL STATE GLOW & BLOOM LAYERS REMOVED
+  // CRISP STATE BORDER OVERLAY — renders high-definition state dividing lines on top
+  const borderOverlay = L.geoJSON(indiaGeoData, {
+    style: {
+      fill: false,
+      fillOpacity: 0,
+      color: "rgba(255, 255, 255, 0.75)",
+      weight: 1.2,
+      opacity: 0.85
+    },
+    interactive: false
+  }).addTo(map);
+  window._glowLayers.push(borderOverlay);
 }
 
 // ═══════════════════════════════════════════════════════════════
