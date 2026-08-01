@@ -371,8 +371,8 @@ function drawHeatmap() {
   // Stroke crisp state boundary lines directly on top of gradient canvas
   hmCtx.save();
   drawGeoJsonPath(hmCtx);
-  hmCtx.strokeStyle = "rgba(255, 255, 255, 0.75)";
-  hmCtx.lineWidth = 1.2;
+  hmCtx.strokeStyle = "rgba(30, 41, 59, 0.95)";
+  hmCtx.lineWidth = 1.0;
   hmCtx.stroke();
   hmCtx.restore();
 }
@@ -508,16 +508,16 @@ function buildChoropleth() {
       return {
         fillColor: colorHex,
         fillOpacity: 0.05,
-        color: "rgba(255, 255, 255, 0.75)",
-        weight: 1.2,
+        color: "rgba(30, 41, 59, 0.95)",
+        weight: 1.0,
         opacity: 1.0,
         className: "state-polygon-feature"
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 2.2, color: "#ffffff", fillOpacity: 0.35 }));
+      layer.on("mouseover", () => layer.setStyle({ weight: 2.0, color: "#ffffff", fillOpacity: 0.35 }));
       layer.on("mouseout", () => {
-        layer.setStyle({ weight: 1.2, color: "rgba(255, 255, 255, 0.75)", fillOpacity: 0.05 });
+        layer.setStyle({ weight: 1.0, color: "rgba(30, 41, 59, 0.95)", fillOpacity: 0.05 });
       });
 
       const d = getStateData(feature);
