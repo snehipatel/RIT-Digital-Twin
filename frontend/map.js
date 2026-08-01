@@ -477,6 +477,45 @@ function autoInitAmbientFromData() {
   }
 }
 
+const STATE_REFERENCE_COLORS = {
+  "Jammu & Kashmir": "#0077ff",
+  "Himachal Pradesh": "#0099ff",
+  "Uttarakhand": "#00b4ff",
+  "Punjab": "#00d4ff",
+  "Haryana": "#00e5cc",
+  "NCT of Delhi": "#00e5cc",
+  "Rajasthan": "#00c853",
+  "Gujarat": "#00c853",
+  "Uttar Pradesh": "#00e5a3",
+  "Bihar": "#00d68f",
+  "West Bengal": "#00bcd4",
+  "Jharkhand": "#f59e0b",
+  "Madhya Pradesh": "#10b981",
+  "Chhattisgarh": "#ff6600",
+  "Orissa": "#ff7700",
+  "Assam": "#00bcd4",
+  "Meghalaya": "#00d4ff",
+  "Nagaland": "#00c853",
+  "Manipur": "#00c853",
+  "Mizoram": "#00c853",
+  "Tripura": "#00d4ff",
+  "Arunachal Pradesh": "#0088ff",
+  "Sikkim": "#0088ff",
+  "Maharashtra": "#059669",
+  "Goa": "#00e5cc",
+  "Karnataka": "#d97706",
+  "Kerala": "#10b981",
+  "Tamil Nadu": "#eab308",
+  "Andhra Pradesh": "#d97706",
+  "Telangana": "#eab308",
+  "Andaman & Nicobar Island": "#00c853",
+  "Lakshadweep": "#00c853",
+  "Chandigarh": "#00d4ff",
+  "Puducherry": "#eab308",
+  "Dadra & Nagar Haveli": "#00c853",
+  "Daman & Diu": "#00c853"
+};
+
 // ═══════════════════════════════════════════════════════════════
 //  CHOROPLETH
 // ═══════════════════════════════════════════════════════════════
@@ -487,46 +526,45 @@ function buildChoropleth() {
   if (window._glowLayers) window._glowLayers.forEach(l => map.removeLayer(l));
   window._glowLayers = [];
 
-  // 1. 3D EXTRUDED VERTICAL BLOCK SIDE WALLS (6-layer offset depth creating 18px extruded block thickness)
-  const wallOffsets = [
-    { opacity: 0.95, color: "#010c22", weight: 3 },
-    { opacity: 0.90, color: "#021233", weight: 3 },
-    { opacity: 0.85, color: "#031a44", weight: 3 },
-    { opacity: 0.80, color: "#042255", weight: 3 },
-    { opacity: 0.75, color: "#052a66", weight: 3 },
-    { opacity: 0.70, color: "#000000", weight: 4 }
-  ];
+  const scale = COLOR_SCALES[currentLayer];
 
-  wallOffsets.forEach((wall, idx) => {
-    const wallLayer = L.geoJSON(indiaGeoData, {
-      style: {
-        fillColor: wall.color,
-        fillOpacity: wall.opacity,
-        color: "rgba(0, 212, 255, 0.45)",
-        weight: wall.weight,
-        className: `india-3d-wall-${idx}`
-      },
-      interactive: false
-    }).addTo(map);
-    window._glowLayers.push(wallLayer);
-  });
+  // 1. 3D EXTRUSION BASE SHADOW LAYER (creates 3D raised block effect under India)
+  const shadowLayer = L.geoJSON(indiaGeoData, {
+    style: {
+      fillColor: "#020814",
+      fillOpacity: 0.95,
+      color: "rgba(0,0,0,0.9)",
+      weight: 14,
+      className: "india-3d-shadow"
+    },
+    interactive: false
+  }).addTo(map);
+  window._glowLayers.push(shadowLayer);
 
   choroplethLayer = L.geoJSON(indiaGeoData, {
     style: feature => {
       const d = getStateData(feature);
-      const val = getLayerValue(d);
-      const isHot = d && d.maxTemp >= 38;
+      const rawName = feature.properties.STNAME_SH || feature.properties.STNAME || feature.properties.NAME_1 || feature.properties.ST_NM || "";
+      let name = rawName.trim();
+      if (name === "Odisha") name = "Orissa";
+      if (name === "Delhi") name = "NCT of Delhi";
+      if (name === "Ladakh") name = "Jammu & Kashmir";
+
+      const refColor = STATE_REFERENCE_COLORS[name] || scaleColor(getLayerValue(d), scale);
+
       return {
-        fillColor: scaleColor(val, scale),
-        fillOpacity: 0.78,
-        color: isHot ? "rgba(255,107,53,0.9)" : "rgba(0,240,255,0.75)",
-        weight: isHot ? 2.0 : 1.2,
-        className: isHot ? "hot-zone-glow" : "state-border-line"
+        fillColor: refColor,
+        fillOpacity: 0.82,
+        color: "rgba(0, 45, 75, 0.75)",
+        weight: 0.8,
+        className: "state-polygon-feature"
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 2.2, color: "rgba(255,255,255,0.9)", fillOpacity: 0.8 }));
-      layer.on("mouseout", () => layer.setStyle({ weight: getStateData(feature).maxTemp >= 38 ? 1.8 : 1.1, color: getStateData(feature).maxTemp >= 38 ? "rgba(255,107,53,0.85)" : "rgba(0,240,255,0.65)", fillOpacity: 0.65 }));
+      layer.on("mouseover", () => layer.setStyle({ weight: 2.0, color: "rgba(255,255,255,0.9)", fillOpacity: 0.95 }));
+      layer.on("mouseout", () => {
+        layer.setStyle({ weight: 0.8, color: "rgba(0, 45, 75, 0.75)", fillOpacity: 0.82 });
+      });
 
       const d = getStateData(feature);
       const name = feature.properties.NAME_1 || "–";
@@ -574,18 +612,14 @@ function buildChoropleth() {
     }
   }).addTo(map);
 
-  // HOT ZONE GLOW/BLOOM LAYER — soft amber→red bloom (className hooks into
-  // the .hot-zone-glow / heatShimmer animation defined in styles.css) plus
-  // a crisp static core so the glow reads clearly at any zoom
+  // HOT ZONE GLOW/BLOOM LAYER
   const hotLayerStyles = [
-    // soft bloom — animated via styles.css .hot-zone-glow
     (d, intensity) => ({
       fillOpacity: 0.05 + intensity * 0.07,
       fillColor: `rgba(255,${Math.round(100 - intensity * 40)},50,1)`,
       color: `rgba(255,${Math.round(107 - intensity * 50)},53,${0.35 + intensity * 0.3})`,
       weight: 6 + intensity * 8, className: "hot-zone-glow"
     }),
-    // crisp hairline core — static, keeps the state edge readable
     (d, intensity) => ({
       fillOpacity: 0,
       color: `rgba(255,${Math.round(200 - intensity * 90)},150,0.9)`,
@@ -606,14 +640,13 @@ function buildChoropleth() {
     window._glowLayers.push(layer);
   });
 
-  // NATIONAL RIM-LIGHT — layered electric outline, brightest at the core,
-  // soft ambient bloom expanding outward (echoes the glowing coastline look)
+  // NATIONAL RIM-LIGHT — layered electric neon outline matching reference image
   const borderStyles = [
-    { color: "rgba(0,190,255,0.05)", weight: 22 },
-    { color: "rgba(0,205,255,0.10)", weight: 12 },
-    { color: "rgba(0,212,255,0.24)", weight: 5 },
-    { color: "rgba(150,240,255,0.55)", weight: 2 },
-    { color: "#e8fbff", weight: 1, opacity: 0.95 },
+    { color: "rgba(0,240,255,0.15)", weight: 26, className: "national-neon-rim" },
+    { color: "rgba(0,240,255,0.35)", weight: 14 },
+    { color: "rgba(0,240,255,0.70)", weight: 6 },
+    { color: "#00f0ff", weight: 2.8, opacity: 0.95 },
+    { color: "#ffffff", weight: 1.2, opacity: 1.0 },
   ];
   borderStyles.forEach(style => {
     const l = L.geoJSON(indiaGeoData, { style: { ...style, fillOpacity: 0 } }).addTo(map);
