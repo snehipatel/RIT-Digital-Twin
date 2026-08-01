@@ -477,47 +477,8 @@ function autoInitAmbientFromData() {
   }
 }
 
-const STATE_REFERENCE_COLORS = {
-  "Jammu & Kashmir": "#0077ff",
-  "Himachal Pradesh": "#00bfff",
-  "Uttarakhand": "#00e5ff",
-  "Punjab": "#00f0ff",
-  "Haryana": "#00ffcc",
-  "NCT of Delhi": "#00ffcc",
-  "Rajasthan": "#00e676",
-  "Gujarat": "#00e676",
-  "Uttar Pradesh": "#00ff88",
-  "Bihar": "#00e5a3",
-  "West Bengal": "#00e5ff",
-  "Jharkhand": "#ffb300",
-  "Madhya Pradesh": "#00c853",
-  "Chhattisgarh": "#ff5500",
-  "Orissa": "#ff4500",
-  "Assam": "#00e5ff",
-  "Meghalaya": "#00f0ff",
-  "Nagaland": "#00e676",
-  "Manipur": "#00e676",
-  "Mizoram": "#00e676",
-  "Tripura": "#00f0ff",
-  "Arunachal Pradesh": "#0077ff",
-  "Sikkim": "#0077ff",
-  "Maharashtra": "#00c853",
-  "Goa": "#00e5cc",
-  "Karnataka": "#ff9100",
-  "Kerala": "#00e676",
-  "Tamil Nadu": "#ffd700",
-  "Andhra Pradesh": "#ff9100",
-  "Telangana": "#ffd700",
-  "Andaman & Nicobar Island": "#00e676",
-  "Lakshadweep": "#00e676",
-  "Chandigarh": "#00f0ff",
-  "Puducherry": "#ffd700",
-  "Dadra & Nagar Haveli": "#00e676",
-  "Daman & Diu": "#00e676"
-};
-
 // ═══════════════════════════════════════════════════════════════
-//  CHOROPLETH
+//  CHOROPLETH — 100% DYNAMIC CLIMATE COLORING
 // ═══════════════════════════════════════════════════════════════
 function buildChoropleth() {
   if (!indiaGeoData || !map) return;
@@ -549,7 +510,7 @@ function buildChoropleth() {
 
       return {
         fillColor: colorHex,
-        fillOpacity: 0.92,
+        fillOpacity: 0.88,
         color: "#222d3d",
         weight: 0.6,
         className: "state-polygon-feature"
