@@ -301,6 +301,7 @@ function initHeatmapCanvas() {
     hmCanvas.height = mapCtr.offsetHeight;
     drawHeatmap();
   };
+  window._resizeHeatmapCanvas = resize;
   resize();
   window.addEventListener("resize", resize);
   map.on("resize", resize);
@@ -449,10 +450,21 @@ function initMap() {
     .then(geo => {
       indiaGeoData = geo;
       buildChoropleth();
+      if (typeof window._resizeHeatmapCanvas === "function") window._resizeHeatmapCanvas();
       drawHeatmap();
       buildWeatherEffects();
       startAnim();
       updateLegend(COLOR_SCALES["max_temp"], "max_temp");
+
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+        if (typeof window._resizeHeatmapCanvas === "function") window._resizeHeatmapCanvas();
+        drawHeatmap();
+      }, 150);
+
+      setTimeout(() => {
+        drawHeatmap();
+      }, 500);
 
       autoInitAmbientFromData();
     })
