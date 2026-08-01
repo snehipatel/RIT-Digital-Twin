@@ -520,35 +520,7 @@ function buildChoropleth() {
     }
   }).addTo(map);
 
-  // HOT ZONE GLOW/BLOOM LAYER
-  const hotLayerStyles = [
-    (d, intensity) => ({
-      fillOpacity: 0.05 + intensity * 0.07,
-      fillColor: `rgba(255,${Math.round(100 - intensity * 40)},50,1)`,
-      color: `rgba(255,${Math.round(107 - intensity * 50)},53,${0.35 + intensity * 0.3})`,
-      weight: 6 + intensity * 8, className: "hot-zone-glow"
-    }),
-    (d, intensity) => ({
-      fillOpacity: 0,
-      color: `rgba(255,${Math.round(200 - intensity * 90)},150,0.9)`,
-      weight: 1, opacity: 0.8
-    }),
-  ];
-  hotLayerStyles.forEach(styleFn => {
-    const layer = L.geoJSON(indiaGeoData, {
-      style: feature => {
-        const d = getStateData(feature);
-        const isHot = d && d.maxTemp >= 38;
-        if (!isHot) return { weight: 0, fillOpacity: 0, opacity: 0 };
-        const intensity = Math.min(1, (d.maxTemp - 38) / 10);
-        return styleFn(d, intensity);
-      },
-      interactive: false
-    }).addTo(map);
-    window._glowLayers.push(layer);
-  });
-
-  // NATIONAL RIM-LIGHT REMOVED
+  // ALL STATE GLOW & BLOOM LAYERS REMOVED
 }
 
 // ═══════════════════════════════════════════════════════════════
