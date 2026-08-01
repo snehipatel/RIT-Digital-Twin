@@ -429,47 +429,8 @@ function autoInitAmbientFromData() {
   }
 }
 
-const STATE_REFERENCE_COLORS = {
-  "Jammu & Kashmir": "#0077ff",
-  "Himachal Pradesh": "#00a8ff",
-  "Uttarakhand": "#00c3ff",
-  "Punjab": "#00d4ff",
-  "Haryana": "#00e5cc",
-  "NCT of Delhi": "#00e5cc",
-  "Rajasthan": "#00c853",
-  "Gujarat": "#00c853",
-  "Uttar Pradesh": "#00e5a3",
-  "Bihar": "#00d68f",
-  "West Bengal": "#00bcd4",
-  "Jharkhand": "#f59e0b",
-  "Madhya Pradesh": "#10b981",
-  "Chhattisgarh": "#ff6600",
-  "Orissa": "#ff7700",
-  "Assam": "#00bcd4",
-  "Meghalaya": "#00d4ff",
-  "Nagaland": "#00c853",
-  "Manipur": "#00c853",
-  "Mizoram": "#00c853",
-  "Tripura": "#00d4ff",
-  "Arunachal Pradesh": "#0088ff",
-  "Sikkim": "#0088ff",
-  "Maharashtra": "#059669",
-  "Goa": "#00e5cc",
-  "Karnataka": "#d97706",
-  "Kerala": "#10b981",
-  "Tamil Nadu": "#eab308",
-  "Andhra Pradesh": "#d97706",
-  "Telangana": "#eab308",
-  "Andaman & Nicobar Island": "#00c853",
-  "Lakshadweep": "#00c853",
-  "Chandigarh": "#00d4ff",
-  "Puducherry": "#eab308",
-  "Dadra & Nagar Haveli": "#00c853",
-  "Daman & Diu": "#00c853"
-};
-
 // ═══════════════════════════════════════════════════════════════
-//  CHOROPLETH
+//  CHOROPLETH — REAL-TIME DYNAMIC CLIMATE COLORING
 // ═══════════════════════════════════════════════════════════════
 function buildChoropleth() {
   if (!indiaGeoData || !map) return;
@@ -496,19 +457,14 @@ function buildChoropleth() {
   choroplethLayer = L.geoJSON(indiaGeoData, {
     style: feature => {
       const d = getStateData(feature);
-      const rawName = feature.properties.STNAME_SH || feature.properties.STNAME || feature.properties.NAME_1 || feature.properties.ST_NM || "";
-      let name = rawName.trim();
-      if (name === "Odisha") name = "Orissa";
-      if (name === "Delhi") name = "NCT of Delhi";
-      if (name === "Ladakh") name = "Jammu & Kashmir";
-
-      const colorHex = STATE_REFERENCE_COLORS[name] || scaleColor(getLayerValue(d), scale);
+      const val = getLayerValue(d);
+      const colorHex = scaleColor(val, scale);
 
       return {
         fillColor: colorHex,
-        fillOpacity: 0.92,
+        fillOpacity: 0.88,
         color: "#1e293b",
-        weight: 0.6,
+        weight: 0.5,
         className: "state-polygon-feature"
       };
     },
