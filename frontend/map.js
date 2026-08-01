@@ -485,12 +485,13 @@ function buildChoropleth() {
   if (!indiaGeoData || !map) return;
 
   if (choroplethLayer) map.removeLayer(choroplethLayer);
-  if (window._glowLayers) window._glowLayers.forEach(l => map.removeLayer(l));
-  window._glowLayers = [];
-
-  const scale = COLOR_SCALES[currentLayer];
+  if (!map.getPane("stateBoundariesPane")) {
+    const pane = map.createPane("stateBoundariesPane");
+    pane.style.zIndex = 430;
+  }
 
   choroplethLayer = L.geoJSON(indiaGeoData, {
+    pane: "stateBoundariesPane",
     style: feature => {
       const d = getStateData(feature);
       const val = getLayerValue(d);
@@ -500,15 +501,15 @@ function buildChoropleth() {
         fillColor: colorHex,
         fillOpacity: 0.05,
         color: "#000000",
-        weight: 0.6,
-        opacity: 0.9,
+        weight: 0.8,
+        opacity: 1.0,
         className: "state-polygon-feature"
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 1.6, color: "#ffffff", fillOpacity: 0.35 }));
+      layer.on("mouseover", () => layer.setStyle({ weight: 1.8, color: "#ffffff", fillOpacity: 0.35 }));
       layer.on("mouseout", () => {
-        layer.setStyle({ weight: 0.6, color: "#000000", fillOpacity: 0.05 });
+        layer.setStyle({ weight: 0.8, color: "#000000", fillOpacity: 0.05 });
       });
 
       const d = getStateData(feature);
