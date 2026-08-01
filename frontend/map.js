@@ -479,41 +479,41 @@ function autoInitAmbientFromData() {
 
 const STATE_REFERENCE_COLORS = {
   "Jammu & Kashmir": "#0077ff",
-  "Himachal Pradesh": "#0099ff",
-  "Uttarakhand": "#00b4ff",
-  "Punjab": "#00d4ff",
-  "Haryana": "#00e5cc",
-  "NCT of Delhi": "#00e5cc",
-  "Rajasthan": "#00c853",
-  "Gujarat": "#00c853",
-  "Uttar Pradesh": "#00e5a3",
-  "Bihar": "#00d68f",
-  "West Bengal": "#00bcd4",
-  "Jharkhand": "#f59e0b",
-  "Madhya Pradesh": "#10b981",
-  "Chhattisgarh": "#ff6600",
-  "Orissa": "#ff7700",
-  "Assam": "#00bcd4",
-  "Meghalaya": "#00d4ff",
-  "Nagaland": "#00c853",
-  "Manipur": "#00c853",
-  "Mizoram": "#00c853",
-  "Tripura": "#00d4ff",
-  "Arunachal Pradesh": "#0088ff",
-  "Sikkim": "#0088ff",
-  "Maharashtra": "#059669",
+  "Himachal Pradesh": "#00bfff",
+  "Uttarakhand": "#00e5ff",
+  "Punjab": "#00f0ff",
+  "Haryana": "#00ffcc",
+  "NCT of Delhi": "#00ffcc",
+  "Rajasthan": "#00e676",
+  "Gujarat": "#00e676",
+  "Uttar Pradesh": "#00ff88",
+  "Bihar": "#00e5a3",
+  "West Bengal": "#00e5ff",
+  "Jharkhand": "#ffb300",
+  "Madhya Pradesh": "#00c853",
+  "Chhattisgarh": "#ff5500",
+  "Orissa": "#ff4500",
+  "Assam": "#00e5ff",
+  "Meghalaya": "#00f0ff",
+  "Nagaland": "#00e676",
+  "Manipur": "#00e676",
+  "Mizoram": "#00e676",
+  "Tripura": "#00f0ff",
+  "Arunachal Pradesh": "#0077ff",
+  "Sikkim": "#0077ff",
+  "Maharashtra": "#00c853",
   "Goa": "#00e5cc",
-  "Karnataka": "#d97706",
-  "Kerala": "#10b981",
-  "Tamil Nadu": "#eab308",
-  "Andhra Pradesh": "#d97706",
-  "Telangana": "#eab308",
-  "Andaman & Nicobar Island": "#00c853",
-  "Lakshadweep": "#00c853",
-  "Chandigarh": "#00d4ff",
-  "Puducherry": "#eab308",
-  "Dadra & Nagar Haveli": "#00c853",
-  "Daman & Diu": "#00c853"
+  "Karnataka": "#ff9100",
+  "Kerala": "#00e676",
+  "Tamil Nadu": "#ffd700",
+  "Andhra Pradesh": "#ff9100",
+  "Telangana": "#ffd700",
+  "Andaman & Nicobar Island": "#00e676",
+  "Lakshadweep": "#00e676",
+  "Chandigarh": "#00f0ff",
+  "Puducherry": "#ffd700",
+  "Dadra & Nagar Haveli": "#00e676",
+  "Daman & Diu": "#00e676"
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -534,7 +534,7 @@ function buildChoropleth() {
       fillColor: "#020814",
       fillOpacity: 0.95,
       color: "rgba(0,0,0,0.9)",
-      weight: 14,
+      weight: 16,
       className: "india-3d-shadow"
     },
     interactive: false
@@ -554,16 +554,16 @@ function buildChoropleth() {
 
       return {
         fillColor: refColor,
-        fillOpacity: 0.82,
-        color: "rgba(0, 45, 75, 0.75)",
-        weight: 0.8,
+        fillOpacity: 0.92,
+        color: "rgba(2, 25, 45, 0.95)",
+        weight: 1.4,
         className: "state-polygon-feature"
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 2.0, color: "rgba(255,255,255,0.9)", fillOpacity: 0.95 }));
+      layer.on("mouseover", () => layer.setStyle({ weight: 2.5, color: "#ffffff", fillOpacity: 1.0 }));
       layer.on("mouseout", () => {
-        layer.setStyle({ weight: 0.8, color: "rgba(0, 45, 75, 0.75)", fillOpacity: 0.82 });
+        layer.setStyle({ weight: 1.4, color: "rgba(2, 25, 45, 0.95)", fillOpacity: 0.92 });
       });
 
       const d = getStateData(feature);
@@ -640,13 +640,10 @@ function buildChoropleth() {
     window._glowLayers.push(layer);
   });
 
-  // NATIONAL RIM-LIGHT — layered electric neon outline matching reference image
+  // NATIONAL RIM-LIGHT — crisp high-definition 3D neon outline matching reference image
   const borderStyles = [
-    { color: "rgba(0,240,255,0.15)", weight: 26, className: "national-neon-rim" },
-    { color: "rgba(0,240,255,0.35)", weight: 14 },
-    { color: "rgba(0,240,255,0.70)", weight: 6 },
-    { color: "#00f0ff", weight: 2.8, opacity: 0.95 },
-    { color: "#ffffff", weight: 1.2, opacity: 1.0 },
+    { color: "#00f0ff", weight: 3.5, opacity: 0.95, className: "national-neon-rim" },
+    { color: "#ffffff", weight: 1.4, opacity: 1.0 },
   ];
   borderStyles.forEach(style => {
     const l = L.geoJSON(indiaGeoData, { style: { ...style, fillOpacity: 0 } }).addTo(map);
