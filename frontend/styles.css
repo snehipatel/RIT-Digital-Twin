@@ -417,6 +417,7 @@ body::before {
   background: rgba(0, 212, 255, 0.1);
   border-color: rgba(0, 212, 255, 0.25);
   color: var(--text-primary);
+  box-shadow: inset 2px 0 0 var(--accent-cyan), 0 0 12px rgba(0, 212, 255, 0.12);
 }
 
 .layer-dot {
@@ -518,6 +519,7 @@ body::before {
   height: 10px;
   border-radius: 999px;
   margin-bottom: 6px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 2px 12px rgba(0, 212, 255, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
 .legend-labels {
@@ -818,6 +820,24 @@ body::before {
   overflow: hidden;
 }
 
+/* Cinematic vignette + cool color grade over the raw tile layer —
+   pulls focus toward the landmass and matches the deep-space
+   backdrop of the reference art. Sits below the HUD/canvas layers. */
+.map-container-rel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 380;
+  background:
+    radial-gradient(ellipse at 50% 38%, transparent 45%, rgba(2, 6, 14, 0.55) 100%),
+    linear-gradient(180deg, rgba(2, 6, 14, 0.35) 0%, transparent 14%, transparent 86%, rgba(2, 6, 14, 0.4) 100%);
+}
+
+.map-container-rel .leaflet-tile-pane {
+  filter: saturate(1.12) brightness(0.9) contrast(1.08);
+}
+
 /* ══ PREMIUM GLASSMORPHIC FLOATING HUD OVERLAYS ══
    Frosted glass panels floating above the map with gradient
    borders, deep blur, inset highlights, and soft drop shadows */
@@ -943,12 +963,13 @@ body::before {
 
 /* Ocean text labels */
 .ocean-label {
-  color: rgba(0, 212, 255, 0.4);
-  text-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
-  font-family: var(--font-head);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.22em;
+  color: rgba(140, 200, 230, 0.55);
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.35), 0 1px 3px rgba(0, 0, 0, 0.8);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.3em;
   white-space: nowrap;
   border: none !important;
   background: none !important;
@@ -4054,11 +4075,11 @@ body::before {
   animation: sonarPing 1.4s cubic-bezier(0.0, 0.0, 0.2, 1) forwards;
 }
 
-/* Second ring — staggered delay via JS class */
+/* Second ring — staggered delay via JS class, warm gold counterpoint */
 .sonar-ring-2 {
   animation: sonarPing 1.4s cubic-bezier(0.0, 0.0, 0.2, 1) forwards;
-  border-color: rgba(0, 212, 255, 0.6);
-  box-shadow: 0 0 6px rgba(0, 212, 255, 0.3);
+  border-color: rgba(245, 185, 80, 0.75);
+  box-shadow: 0 0 8px rgba(245, 185, 80, 0.4);
 }
 
 /* Center dot — solid, stays then fades */
@@ -4332,6 +4353,9 @@ body::before {
   transform: translateX(16px);
   background-color: #00d4ff;
 }
+
+.custom-select-trigger {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;

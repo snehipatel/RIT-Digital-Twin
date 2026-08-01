@@ -368,6 +368,16 @@ function drawHeatmap() {
   hmCtx.restore();
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  PREMIUM VISUAL SKIN
+//  Chrome/UI polish (tooltip, HUD, legend, sonar, ocean labels,
+//  vignette) now lives in styles.css alongside the rest of the
+//  design system — see the "MAP PANEL" and "HOT ZONE GLOW" sections
+//  there. This function is intentionally a no-op so map.js never
+//  fights the real stylesheet with duplicate/!important rules.
+// ═══════════════════════════════════════════════════════════════
+function injectPremiumStyles() { /* styling now owned by styles.css */ }
+
 function addOceanLabels() {
   if (!map) return;
   const labels = [
@@ -392,6 +402,7 @@ function addOceanLabels() {
 //  INIT MAP
 // ═══════════════════════════════════════════════════════════════
 function initMap() {
+  injectPremiumStyles();
   mapCtr = document.getElementById("india-map");
   const r = REGION_INFO["all"];
 
@@ -486,12 +497,15 @@ function buildChoropleth() {
       return {
         fillColor: scaleColor(val, scale),
         fillOpacity: 0.0,
-        color: isHot ? "rgba(255,107,53,0.5)" : "rgba(0,220,255,0.0)",
-        weight: isHot ? 1.5 : 0,
-        className: isHot ? "hot-zone-glow" : ""
+        color: isHot ? "rgba(255,107,53,0.5)" : "rgba(120,210,235,0.16)",
+        weight: isHot ? 1.5 : 0.6,
+        className: isHot ? "hot-zone-glow" : "state-border-line"
       };
     },
     onEachFeature: (feature, layer) => {
+      layer.on("mouseover", () => layer.setStyle({ weight: 1.6, color: "rgba(220,245,255,0.55)" }));
+      layer.on("mouseout", () => layer.setStyle({ weight: getStateData(feature).maxTemp >= 38 ? 1.5 : 0.6 }));
+
       const d = getStateData(feature);
       const name = feature.properties.NAME_1 || "–";
       layer.bindTooltip(
@@ -538,30 +552,46 @@ function buildChoropleth() {
     }
   }).addTo(map);
 
-  // HOT ZONE GLOW/BLOOM LAYER
-  const hotGlowLayer = L.geoJSON(indiaGeoData, {
-    style: feature => {
-      const d = getStateData(feature);
-      const isHot = d && d.maxTemp >= 38;
-      if (!isHot) return { weight: 0, fillOpacity: 0, opacity: 0 };
-      const intensity = Math.min(1, (d.maxTemp - 38) / 10);
-      return {
-        fillOpacity: 0.04 + intensity * 0.06,
-        fillColor: `rgba(255, ${Math.round(100 - intensity * 40)}, 50, 1)`,
-        color: `rgba(255, ${Math.round(107 - intensity * 50)}, 53, ${0.3 + intensity * 0.3})`,
-        weight: 6 + intensity * 6,
-        className: "hot-zone-glow"
-      };
-    },
-    interactive: false
+  // HOT ZONE GLOW/BLOOM LAYER — soft amber→red bloom (className hooks into
+  // the .hot-zone-glow / heatShimmer animation defined in styles.css) plus
+  // a crisp static core so the glow reads clearly at any zoom
+  const hotLayerStyles = [
+    // soft bloom — animated via styles.css .hot-zone-glow
+    (d, intensity) => ({
+      fillOpacity: 0.05 + intensity * 0.07,
+      fillColor: `rgba(255,${Math.round(100 - intensity * 40)},50,1)`,
+      color: `rgba(255,${Math.round(107 - intensity * 50)},53,${0.35 + intensity * 0.3})`,
+      weight: 6 + intensity * 8, className: "hot-zone-glow"
+    }),
+    // crisp hairline core — static, keeps the state edge readable
+    (d, intensity) => ({
+      fillOpacity: 0,
+      color: `rgba(255,${Math.round(200 - intensity * 90)},150,0.9)`,
+      weight: 1, opacity: 0.8
+    }),
+  ];
+  hotLayerStyles.forEach(styleFn => {
+    const layer = L.geoJSON(indiaGeoData, {
+      style: feature => {
+        const d = getStateData(feature);
+        const isHot = d && d.maxTemp >= 38;
+        if (!isHot) return { weight: 0, fillOpacity: 0, opacity: 0 };
+        const intensity = Math.min(1, (d.maxTemp - 38) / 10);
+        return styleFn(d, intensity);
+      },
+      interactive: false
+    }).addTo(map);
+    window._glowLayers.push(layer);
   });
-  hotGlowLayer.addTo(map);
-  window._glowLayers.push(hotGlowLayer);
 
+  // NATIONAL RIM-LIGHT — layered electric outline, brightest at the core,
+  // soft ambient bloom expanding outward (echoes the glowing coastline look)
   const borderStyles = [
-    { color: "rgba(0,212,255,0.06)", weight: 14 },
-    { color: "rgba(0,212,255,0.22)", weight: 4 },
-    { color: "#00e5ff", weight: 1.3, opacity: 0.88 },
+    { color: "rgba(0,190,255,0.05)", weight: 22 },
+    { color: "rgba(0,205,255,0.10)", weight: 12 },
+    { color: "rgba(0,212,255,0.24)", weight: 5 },
+    { color: "rgba(150,240,255,0.55)", weight: 2 },
+    { color: "#e8fbff", weight: 1, opacity: 0.95 },
   ];
   borderStyles.forEach(style => {
     const l = L.geoJSON(indiaGeoData, { style: { ...style, fillOpacity: 0 } }).addTo(map);
@@ -595,6 +625,7 @@ function initWeatherCanvas() {
 function buildWeatherEffects() {
   clouds = [];
   rain = [];
+  if (windArcs.length === 0) buildWindArcs();
   if (!map) return;
 
   Object.entries(STATE_WEATHER).forEach(([stateName, data]) => {
@@ -657,6 +688,7 @@ function drawWeather(dt, now) {
   const zoom = map.getZoom();
   _cachedZoomFactor = Math.max(0.6, Math.min(4.0, Math.pow(1.28, zoom - 5)));
   wxCtx.clearRect(0, 0, wxCanvas.width, wxCanvas.height);
+  drawWindArcs(wxCtx, dt, now);
   drawCloudSprites(wxCtx, dt, now);
 }
 
@@ -694,11 +726,11 @@ function drawCloudSprites(ctx, dt, now) {
     ctx.globalAlpha = c.opacity;
 
     if (c.isStorm) {
-      // Dark stormy tint for heavy rainfall/cloud states
-      ctx.filter = "brightness(0.55) contrast(1.25) drop-shadow(0px 8px 12px rgba(10,20,40,0.6))";
+      // Dark stormy tint with a cool electric rim, echoes storm-front lighting
+      ctx.filter = "brightness(0.6) contrast(1.3) saturate(1.15) drop-shadow(0px 10px 16px rgba(5,15,35,0.65)) drop-shadow(0px 0px 10px rgba(70,150,255,0.18))";
     } else {
-      // Crisp bright cloud with soft drop shadow
-      ctx.filter = "brightness(1.05) drop-shadow(0px 4px 10px rgba(0,0,0,0.35))";
+      // Crisp bright cloud with a soft warm-white glow
+      ctx.filter = "brightness(1.1) contrast(1.05) drop-shadow(0px 5px 12px rgba(0,0,0,0.3)) drop-shadow(0px 0px 8px rgba(255,255,255,0.12))";
     }
 
     ctx.drawImage(cloudImg, px.x - w / 2, px.y - h / 2, w, h);
@@ -707,6 +739,79 @@ function drawCloudSprites(ctx, dt, now) {
   });
   } // end if (showCloudsOnMap)
   ctx.globalAlpha = 1;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  WIND-FLOW ARCS — signature premium element: glowing animated
+//  monsoon flow lines sweeping over the map with traveling light
+//  particles, echoing the reference art's isobar/wind streams.
+// ═══════════════════════════════════════════════════════════════
+let windArcs = [];
+
+function buildWindArcs() {
+  windArcs = [
+    { from: [8.5, 68.0], to: [26.0, 82.0], ctrl: [16.0, 68.0], speed: 0.09, particles: 3 },
+    { from: [11.0, 72.0], to: [29.0, 88.0], ctrl: [19.0, 74.0], speed: 0.075, particles: 3 },
+    { from: [14.0, 78.0], to: [30.5, 92.0], ctrl: [22.0, 82.0], speed: 0.06, particles: 2 },
+    { from: [9.0, 88.0], to: [27.0, 91.5], ctrl: [16.0, 92.0], speed: 0.08, particles: 2 },
+  ];
+}
+
+function quadPoint(p0, c, p1, t) {
+  const mt = 1 - t;
+  return [
+    mt * mt * p0[0] + 2 * mt * t * c[0] + t * t * p1[0],
+    mt * mt * p0[1] + 2 * mt * t * c[1] + t * t * p1[1],
+  ];
+}
+
+function drawWindArcs(ctx, dt, now) {
+  if (!map || !showCloudsOnMap || windArcs.length === 0) return;
+  const zoom = map.getZoom();
+  if (zoom > 8) return; // only show at country/regional scale
+  const t = now * 0.001;
+  const fadeByZoom = Math.max(0, Math.min(1, (8 - zoom) / 2));
+
+  windArcs.forEach((arc, i) => {
+    const steps = 40;
+    const pts = [];
+    for (let s = 0; s <= steps; s++) {
+      const tt = s / steps;
+      const [lat, lon] = quadPoint(arc.from, arc.ctrl, arc.to, tt);
+      pts.push(map.latLngToContainerPoint([lat, lon]));
+    }
+
+    ctx.save();
+    ctx.globalAlpha = 0.30 * fadeByZoom;
+    ctx.strokeStyle = "rgba(140,225,255,0.9)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 7]);
+    ctx.lineDashOffset = -(t * 40) % 9;
+    ctx.beginPath();
+    pts.forEach((p, idx) => idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // traveling glow particles along the arc
+    for (let p = 0; p < arc.particles; p++) {
+      const phase = (t * arc.speed + p / arc.particles + i * 0.13) % 1;
+      const [lat, lon] = quadPoint(arc.from, arc.ctrl, arc.to, phase);
+      const pt = map.latLngToContainerPoint([lat, lon]);
+      const edgeFade = Math.sin(phase * Math.PI); // fade in/out at ends
+
+      ctx.save();
+      ctx.globalAlpha = 0.85 * edgeFade * fadeByZoom;
+      const grad = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, 6);
+      grad.addColorStop(0, "rgba(220,250,255,1)");
+      grad.addColorStop(1, "rgba(0,180,255,0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  });
 }
 
 let showCloudsOnMap = true;
