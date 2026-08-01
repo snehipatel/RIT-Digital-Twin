@@ -316,8 +316,57 @@ function initHeatmapCanvas() {
 }
 
 function drawHeatmap() {
-  if (!hmCtx || !hmCanvas) return;
-  hmCtx.clearRect(0, 0, hmCanvas.width, hmCanvas.height);
+  if (!hmCtx || !hmCanvas || !map || !indiaGeoData) return;
+
+  const width = hmCanvas.width;
+  const height = hmCanvas.height;
+  hmCtx.clearRect(0, 0, width, height);
+
+  const bounds = map.getBounds();
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+
+  const latMin = sw.lat;
+  const latMax = ne.lat;
+  const lonMin = sw.lng;
+  const lonMax = ne.lng;
+
+  const gw = offscreenCanvas.width;
+  const gh = offscreenCanvas.height;
+  const imgData = offscreenCtx.createImageData(gw, gh);
+  const data = imgData.data;
+
+  const scale = COLOR_SCALES[currentLayer];
+
+  for (let y = 0; y < gh; y++) {
+    const lat = latMax - (y / (gh - 1)) * (latMax - latMin);
+    for (let x = 0; x < gw; x++) {
+      const lon = lonMin + (x / (gw - 1)) * (lonMax - lonMin);
+
+      const val = interpolateValue(lat, lon, currentLayer);
+      const color = getRGBColor(val, scale);
+
+      const idx = (y * gw + x) * 4;
+      data[idx] = color.r;
+      data[idx + 1] = color.g;
+      data[idx + 2] = color.b;
+      data[idx + 3] = 235;
+    }
+  }
+
+  gaussianBlurImageData(imgData, gw, gh, 3);
+  gaussianBlurImageData(imgData, gw, gh, 2);
+
+  offscreenCtx.putImageData(imgData, 0, 0);
+
+  hmCtx.save();
+  drawGeoJsonPath(hmCtx);
+  hmCtx.clip("evenodd");
+
+  hmCtx.filter = "blur(2px)";
+  hmCtx.drawImage(offscreenCanvas, 0, 0, width, height);
+  hmCtx.filter = "none";
+  hmCtx.restore();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -462,16 +511,16 @@ function buildChoropleth() {
 
       return {
         fillColor: colorHex,
-        fillOpacity: 0.94,
+        fillOpacity: 0.05,
         color: "#1e293b",
         weight: 0.5,
         className: "state-polygon-feature"
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 1.5, color: "#ffffff", fillOpacity: 0.98 }));
+      layer.on("mouseover", () => layer.setStyle({ weight: 1.5, color: "#ffffff", fillOpacity: 0.35 }));
       layer.on("mouseout", () => {
-        layer.setStyle({ weight: 0.5, color: "#1e293b", fillOpacity: 0.94 });
+        layer.setStyle({ weight: 0.5, color: "#1e293b", fillOpacity: 0.05 });
       });
 
       const d = getStateData(feature);
