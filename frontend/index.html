@@ -314,39 +314,6 @@
           </div>
         </section>
 
-        <!-- Daily Comparison Strip -->
-        <div class="daily-comparison glass-card">
-          <div class="panel-header">
-            <span class="panel-title"><i data-lucide="trending-up" size="16"></i> Daily Comparison — vs Yesterday</span>
-            <span class="model-tag">Delta Analysis</span>
-          </div>
-          <div class="comparison-row" id="comparison-row">
-            <div class="comp-item">
-              <div class="comp-label">MAX TEMP</div>
-              <div class="comp-value" id="comp-max">—</div>
-              <div class="comp-delta up" id="comp-max-delta">↑ +1.2°C</div>
-            </div>
-            <div class="comp-divider"></div>
-            <div class="comp-item">
-              <div class="comp-label">MIN TEMP</div>
-              <div class="comp-value" id="comp-min">—</div>
-              <div class="comp-delta up" id="comp-min-delta">↑ +0.6°C</div>
-            </div>
-            <div class="comp-divider"></div>
-            <div class="comp-item">
-              <div class="comp-label">RAINFALL</div>
-              <div class="comp-value" id="comp-rain">—</div>
-              <div class="comp-delta down" id="comp-rain-delta">↓ −4.3 mm</div>
-            </div>
-            <div class="comp-divider"></div>
-            <div class="comp-item">
-              <div class="comp-label">HUMIDITY</div>
-              <div class="comp-value" id="comp-hum">—</div>
-              <div class="comp-delta down" id="comp-hum-delta">↓ −2%</div>
-            </div>
-          </div>
-        </div>
-
         <!-- Temperature Trend (7-Day) -->
         <div class="chart-card glass-card">
           <div class="panel-header">
@@ -373,63 +340,20 @@
         <!-- Historical Timeline -->
         <section class="timeline-section glass-card" id="timeline-section">
           <div class="timeline-header">
-            <span class="panel-title"><i data-lucide="clock" size="16"></i> Historical Timeline</span>
+            <span class="panel-title"><i data-lucide="clock" size="16"></i> Historical Timeline (1951 – 2025)</span>
             <span class="timeline-year" id="timeline-year">2024</span>
           </div>
           <div class="timeline-body">
-            <input type="range" class="timeline-slider" id="timeline-slider" min="2000" max="2025" step="1"
+            <input type="range" class="timeline-slider" id="timeline-slider" min="1951" max="2025" step="1"
               value="2024" />
             <div class="timeline-labels">
-              <span>2000</span><span>2005</span><span>2010</span><span>2015</span><span>2020</span><span>2025</span>
+              <span>1951</span><span>1965</span><span>1980</span><span>1995</span><span>2010</span><span>2025</span>
             </div>
           </div>
           <div class="timeline-stats" id="timeline-stats">
             <!-- populated by JS -->
           </div>
         </section>
-
-        <!-- Data Sources -->
-        <div class="data-sources-card glass-card">
-          <div class="panel-header">
-            <span class="panel-title"><i data-lucide="database" size="16"></i> Data Sources</span>
-            <span class="resolution-tag">Integrated</span>
-          </div>
-          <div class="sources-grid">
-            <div class="source-item">
-              <div class="source-icon isro-bg">🛰️</div>
-              <div class="source-info">
-                <div class="source-name">ISRO · INSAT-3D/3DR</div>
-                <div class="source-desc">Geostationary satellite data, cloud imaging, OLR</div>
-              </div>
-              <div class="source-status ok-dot"></div>
-            </div>
-            <div class="source-item">
-              <div class="source-icon imd-bg">🌦️</div>
-              <div class="source-info">
-                <div class="source-name">IMD Grid Observations</div>
-                <div class="source-desc">0.25° gridded temperature & rainfall datasets</div>
-              </div>
-              <div class="source-status ok-dot"></div>
-            </div>
-            <div class="source-item">
-              <div class="source-icon mosdac-bg">📡</div>
-              <div class="source-info">
-                <div class="source-name">MOSDAC / SAC</div>
-                <div class="source-desc">Soil moisture, land surface temperature, NDVI</div>
-              </div>
-              <div class="source-status ok-dot"></div>
-            </div>
-            <div class="source-item">
-              <div class="source-icon bhuvan-bg">🗺️</div>
-              <div class="source-info">
-                <div class="source-name">Bhuvan Geoportal</div>
-                <div class="source-desc">DEM, land use / land cover, watershed data</div>
-              </div>
-              <div class="source-status ok-dot"></div>
-            </div>
-          </div>
-        </div>
-
       </div><!-- /page-dashboard -->
 
 
@@ -1280,7 +1204,7 @@
             <div class="feature-item">
               <div class="feature-icon">📈</div>
               <div class="feature-title">Historical Analysis</div>
-              <div class="feature-desc">25-year historical timeline scrubber showing temperature trends, rainfall
+              <div class="feature-desc">75-year IMD historical timeline scrubber (1951–2025) showing temperature trends, rainfall
                 anomalies, and extreme event frequencies.</div>
             </div>
           </div>
