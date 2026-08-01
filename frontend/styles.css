@@ -835,17 +835,18 @@ body::before {
 }
 
 .map-container-rel .leaflet-tile-pane {
-  filter: brightness(0.55) contrast(1.25) saturate(0.85);
+  filter: brightness(0.52) contrast(1.25) saturate(0.80);
 }
 
 /* Premium national outline — soft ambient cyan glow */
 .india-premium-outline {
-  filter: drop-shadow(0 0 20px rgba(89, 245, 255, 0.4)) drop-shadow(0 0 6px rgba(89, 245, 255, 0.25));
+  filter: drop-shadow(0 0 18px rgba(89, 245, 255, 0.35)) drop-shadow(0 0 5px rgba(89, 245, 255, 0.20));
 }
 
-/* Heatmap raster canvas sits above basemap, below choropleth borders */
-#heatmap-canvas {
-  z-index: 405 !important;
+/* IMD raster temperature overlay — smooth anti-aliased rendering */
+.imd-raster-overlay {
+  image-rendering: auto;
+  filter: saturate(0.82) brightness(1.04);
 }
 
 /* ══ PREMIUM GLASSMORPHIC FLOATING HUD OVERLAYS ══
