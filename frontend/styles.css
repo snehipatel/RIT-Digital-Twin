@@ -834,13 +834,26 @@ body::before {
     linear-gradient(180deg, rgba(2, 6, 14, 0.35) 0%, transparent 14%, transparent 86%, rgba(2, 6, 14, 0.4) 100%);
 }
 
+.map-container-rel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 390;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+}
+
 .map-container-rel .leaflet-tile-pane {
-  filter: brightness(0.65) contrast(1.35) saturate(1.2) hue-rotate(-5deg);
+  filter: brightness(0.85) contrast(1.15) saturate(0.88);
 }
 
 .india-3d-shadow {
   transform: translate(6px, 8px) !important;
-  filter: drop-shadow(10px 14px 18px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 25px rgba(0, 212, 255, 0.45));
+  filter: drop-shadow(10px 14px 18px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 25px rgba(0, 212, 255, 0.25));
+}
+
+.india-outer-glow path {
+  filter: drop-shadow(0 0 20px #59F5FF) !important;
 }
 
 /* ══ PREMIUM GLASSMORPHIC FLOATING HUD OVERLAYS ══

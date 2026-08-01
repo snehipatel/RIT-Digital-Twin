@@ -316,8 +316,65 @@ function initHeatmapCanvas() {
 }
 
 function drawHeatmap() {
-  if (!hmCtx || !hmCanvas) return;
-  hmCtx.clearRect(0, 0, hmCanvas.width, hmCanvas.height);
+  if (!hmCtx || !hmCanvas || !map || !indiaGeoData) return;
+
+  const width = hmCanvas.width;
+  const height = hmCanvas.height;
+  hmCtx.clearRect(0, 0, width, height);
+
+  const bounds = map.getBounds();
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+
+  const latMin = sw.lat;
+  const latMax = ne.lat;
+  const lonMin = sw.lng;
+  const lonMax = ne.lng;
+
+  const gw = offscreenCanvas.width;
+  const gh = offscreenCanvas.height;
+  const imgData = offscreenCtx.createImageData(gw, gh);
+  const data = imgData.data;
+
+  const scale = COLOR_SCALES[currentLayer];
+
+  for (let y = 0; y < gh; y++) {
+    const lat = latMax - (y / (gh - 1)) * (latMax - latMin);
+    for (let x = 0; x < gw; x++) {
+      const lon = lonMin + (x / (gw - 1)) * (lonMax - lonMin);
+
+      const val = interpolateValue(lat, lon, currentLayer);
+      const color = getRGBColor(val, scale);
+
+      const idx = (y * gw + x) * 4;
+      data[idx]     = color.r;
+      data[idx + 1] = color.g;
+      data[idx + 2] = color.b;
+      data[idx + 3] = 230; // 90% opacity for vivid pastel raster
+    }
+  }
+
+  // 2–5% micro-terrain noise variation to avoid flat synthetic surface
+  for (let i = 0; i < data.length; i += 4) {
+    const noise = (Math.random() - 0.5) * 8; // ~3% terrain variation
+    data[i]     = Math.max(0, Math.min(255, data[i] + noise));
+    data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
+    data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
+  }
+
+  gaussianBlurImageData(imgData, gw, gh, 3);
+  gaussianBlurImageData(imgData, gw, gh, 2);
+
+  offscreenCtx.putImageData(imgData, 0, 0);
+
+  hmCtx.save();
+  drawGeoJsonPath(hmCtx);
+  hmCtx.clip("evenodd");
+
+  hmCtx.filter = "saturate(0.85) brightness(1.05)";
+  hmCtx.drawImage(offscreenCanvas, 0, 0, width, height);
+  hmCtx.filter = "none";
+  hmCtx.restore();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -456,22 +513,19 @@ function buildChoropleth() {
 
   choroplethLayer = L.geoJSON(indiaGeoData, {
     style: feature => {
-      const d = getStateData(feature);
-      const val = getLayerValue(d);
-      const colorHex = scaleColor(val, scale);
-
       return {
-        fillColor: colorHex,
-        fillOpacity: 0.88,
-        color: "#1e293b",
-        weight: 0.5,
+        fillColor: "transparent",
+        fillOpacity: 0,
+        color: "#F2E9A4",
+        weight: 0.9,
+        opacity: 0.6,
         className: "state-polygon-feature"
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 1.5, color: "#ffffff", fillOpacity: 0.98 }));
+      layer.on("mouseover", () => layer.setStyle({ weight: 1.8, color: "#ffffff", opacity: 0.95 }));
       layer.on("mouseout", () => {
-        layer.setStyle({ weight: 0.5, color: "#1e293b", fillOpacity: 0.88 });
+        layer.setStyle({ weight: 0.9, color: "#F2E9A4", opacity: 0.6 });
       });
 
       const d = getStateData(feature);
@@ -520,7 +574,30 @@ function buildChoropleth() {
     }
   }).addTo(map);
 
-  // ALL STATE GLOW & BLOOM LAYERS REMOVED
+  // 2. PREMIUM INDIA OUTLINE & GLOW LAYERS
+  const outerGlowLayer = L.geoJSON(indiaGeoData, {
+    style: {
+      color: "#59F5FF",
+      weight: 12,
+      opacity: 0.4,
+      fillOpacity: 0,
+      className: "india-outer-glow"
+    },
+    interactive: false
+  }).addTo(map);
+  window._glowLayers.push(outerGlowLayer);
+
+  const innerOutlineLayer = L.geoJSON(indiaGeoData, {
+    style: {
+      color: "#B9FFFF",
+      weight: 1.2,
+      opacity: 0.9,
+      fillOpacity: 0,
+      className: "india-inner-outline"
+    },
+    interactive: false
+  }).addTo(map);
+  window._glowLayers.push(innerOutlineLayer);
 }
 
 // ═══════════════════════════════════════════════════════════════
