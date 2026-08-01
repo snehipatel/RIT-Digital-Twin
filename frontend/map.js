@@ -496,15 +496,15 @@ function buildChoropleth() {
       const isHot = d && d.maxTemp >= 38;
       return {
         fillColor: scaleColor(val, scale),
-        fillOpacity: 0.0,
-        color: isHot ? "rgba(255,107,53,0.5)" : "rgba(120,210,235,0.16)",
-        weight: isHot ? 1.5 : 0.6,
+        fillOpacity: 0.65,
+        color: isHot ? "rgba(255,107,53,0.85)" : "rgba(0,240,255,0.65)",
+        weight: isHot ? 1.8 : 1.1,
         className: isHot ? "hot-zone-glow" : "state-border-line"
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 1.6, color: "rgba(220,245,255,0.55)" }));
-      layer.on("mouseout", () => layer.setStyle({ weight: getStateData(feature).maxTemp >= 38 ? 1.5 : 0.6 }));
+      layer.on("mouseover", () => layer.setStyle({ weight: 2.2, color: "rgba(255,255,255,0.9)", fillOpacity: 0.8 }));
+      layer.on("mouseout", () => layer.setStyle({ weight: getStateData(feature).maxTemp >= 38 ? 1.8 : 1.1, color: getStateData(feature).maxTemp >= 38 ? "rgba(255,107,53,0.85)" : "rgba(0,240,255,0.65)", fillOpacity: 0.65 }));
 
       const d = getStateData(feature);
       const name = feature.properties.NAME_1 || "–";
