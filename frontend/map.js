@@ -364,17 +364,10 @@ function drawHeatmap() {
   hmCtx.clip("evenodd");
 
   hmCtx.filter = "blur(2px)";
-  hmCtx.globalCompositeOperation = "source-over";
+  hmCtx.globalCompositeOperation = "soft-light";
   hmCtx.drawImage(offscreenCanvas, 0, 0, width, height);
+  hmCtx.globalCompositeOperation = "source-over";
   hmCtx.filter = "none";
-  hmCtx.restore();
-
-  // Stroke crisp state boundary lines directly on top of gradient canvas
-  hmCtx.save();
-  drawGeoJsonPath(hmCtx);
-  hmCtx.strokeStyle = "rgba(30, 41, 59, 0.95)";
-  hmCtx.lineWidth = 1.0;
-  hmCtx.stroke();
   hmCtx.restore();
 }
 
@@ -509,16 +502,16 @@ function buildChoropleth() {
       return {
         fillColor: colorHex,
         fillOpacity: 0.05,
-        color: "rgba(30, 41, 59, 0.95)",
-        weight: 1.0,
-        opacity: 1.0,
+        color: "#1e293b",
+        weight: 0.5,
+        opacity: 0.9,
         className: "state-polygon-feature"
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 2.0, color: "#ffffff", fillOpacity: 0.35 }));
+      layer.on("mouseover", () => layer.setStyle({ weight: 1.5, color: "#ffffff", fillOpacity: 0.35 }));
       layer.on("mouseout", () => {
-        layer.setStyle({ weight: 1.0, color: "rgba(30, 41, 59, 0.95)", fillOpacity: 0.05 });
+        layer.setStyle({ weight: 0.5, color: "#1e293b", fillOpacity: 0.05 });
       });
 
       const d = getStateData(feature);
