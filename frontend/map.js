@@ -37,10 +37,10 @@ cloudImg.src = "cloud.png";
 let cloudImgLoaded = false;
 cloudImg.onload = () => { cloudImgLoaded = true; };
 
-// Higher resolution offscreen canvas for smooth heatmap
+// Higher resolution offscreen canvas for smooth continuous raster
 const offscreenCanvas = document.createElement("canvas");
-offscreenCanvas.width = 200;
-offscreenCanvas.height = 160;
+offscreenCanvas.width = 280;
+offscreenCanvas.height = 220;
 const offscreenCtx = offscreenCanvas.getContext("2d", { willReadFrequently: true });
 
 let clouds = [], rain = [];
@@ -315,6 +315,15 @@ function initHeatmapCanvas() {
   map.on("move zoom viewreset", throttledDrawHeatmap);
 }
 
+// ── Simple hash for terrain noise variation (2-5%) ──
+function terrainNoise(x, y) {
+  let h = (x * 374761393 + y * 668265263 + 1013904223) & 0xffffffff;
+  h = ((h >> 16) ^ h) * 0x45d9f3b;
+  h = ((h >> 16) ^ h) * 0x45d9f3b;
+  h = (h >> 16) ^ h;
+  return ((h & 0xffff) / 65536.0 - 0.5) * 0.06; // ±3% variation
+}
+
 function drawHeatmap() {
   if (!hmCtx || !hmCanvas || !map || !indiaGeoData) return;
 
@@ -325,17 +334,13 @@ function drawHeatmap() {
   const bounds = map.getBounds();
   const sw = bounds.getSouthWest();
   const ne = bounds.getNorthEast();
-
-  const latMin = sw.lat;
-  const latMax = ne.lat;
-  const lonMin = sw.lng;
-  const lonMax = ne.lng;
+  const latMin = sw.lat, latMax = ne.lat;
+  const lonMin = sw.lng, lonMax = ne.lng;
 
   const gw = offscreenCanvas.width;
   const gh = offscreenCanvas.height;
   const imgData = offscreenCtx.createImageData(gw, gh);
   const data = imgData.data;
-
   const scale = COLOR_SCALES[currentLayer];
 
   for (let y = 0; y < gh; y++) {
@@ -343,37 +348,47 @@ function drawHeatmap() {
     for (let x = 0; x < gw; x++) {
       const lon = lonMin + (x / (gw - 1)) * (lonMax - lonMin);
 
-      const val = interpolateValue(lat, lon, currentLayer);
-      const color = getRGBColor(val, scale);
+      let val = interpolateValue(lat, lon, currentLayer);
+      // Add terrain noise variation (±3%)
+      val += val * terrainNoise(x, y);
 
+      const color = getRGBColor(val, scale);
       const idx = (y * gw + x) * 4;
       data[idx]     = color.r;
       data[idx + 1] = color.g;
       data[idx + 2] = color.b;
-      data[idx + 3] = 230; // 90% opacity for vivid pastel raster
+      data[idx + 3] = 185;
     }
   }
 
-  // 2–5% micro-terrain noise variation to avoid flat synthetic surface
-  for (let i = 0; i < data.length; i += 4) {
-    const noise = (Math.random() - 0.5) * 8; // ~3% terrain variation
-    data[i]     = Math.max(0, Math.min(255, data[i] + noise));
-    data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
-    data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
-  }
-
+  // Triple Gaussian blur for silky-smooth feathered transitions
+  gaussianBlurImageData(imgData, gw, gh, 4);
   gaussianBlurImageData(imgData, gw, gh, 3);
   gaussianBlurImageData(imgData, gw, gh, 2);
 
   offscreenCtx.putImageData(imgData, 0, 0);
 
+  // Clip to India boundary
   hmCtx.save();
   drawGeoJsonPath(hmCtx);
   hmCtx.clip("evenodd");
 
-  hmCtx.filter = "saturate(0.85) brightness(1.05)";
+  // Draw raster with extra CSS feathering
+  hmCtx.filter = "blur(3px) saturate(0.78) brightness(1.08)";
   hmCtx.drawImage(offscreenCanvas, 0, 0, width, height);
   hmCtx.filter = "none";
+
+  // Radial lighting overlay — center slightly brighter than edges
+  const cx = width * 0.50;
+  const cy = height * 0.40;
+  const maxR = Math.max(width, height) * 0.65;
+  const radGrad = hmCtx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
+  radGrad.addColorStop(0, "rgba(255, 255, 240, 0.06)");
+  radGrad.addColorStop(0.5, "rgba(255, 255, 240, 0.02)");
+  radGrad.addColorStop(1, "rgba(0, 3, 12, 0.22)");
+  hmCtx.fillStyle = radGrad;
+  hmCtx.fillRect(0, 0, width, height);
+
   hmCtx.restore();
 }
 
@@ -487,7 +502,9 @@ function autoInitAmbientFromData() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  CHOROPLETH — REAL-TIME DYNAMIC CLIMATE COLORING
+//  CHOROPLETH — TRANSPARENT INTERACTIVE LAYER + PREMIUM OUTLINE
+//  State fills are invisible; the smooth IDW raster (drawHeatmap)
+//  provides all climate coloring. Polygons exist for hover/click.
 // ═══════════════════════════════════════════════════════════════
 function buildChoropleth() {
   if (!indiaGeoData || !map) return;
@@ -496,37 +513,22 @@ function buildChoropleth() {
   if (window._glowLayers) window._glowLayers.forEach(l => map.removeLayer(l));
   window._glowLayers = [];
 
-  const scale = COLOR_SCALES[currentLayer];
-
-  // 1. 3D EXTRUSION BASE SHADOW LAYER (creates 3D raised block effect under India)
-  const shadowLayer = L.geoJSON(indiaGeoData, {
-    style: {
-      fillColor: "#020814",
-      fillOpacity: 0.95,
-      color: "rgba(0,0,0,0.9)",
-      weight: 16,
-      className: "india-3d-shadow"
-    },
-    interactive: false
-  }).addTo(map);
-  window._glowLayers.push(shadowLayer);
-
+  // Interactive state polygons — transparent fill, subtle gold borders
   choroplethLayer = L.geoJSON(indiaGeoData, {
-    style: feature => {
-      return {
-        fillColor: "transparent",
-        fillOpacity: 0,
-        color: "#F2E9A4",
-        weight: 0.9,
-        opacity: 0.6,
-        className: "state-polygon-feature"
-      };
-    },
+    style: () => ({
+      fillColor: "transparent",
+      fillOpacity: 0.0,
+      color: "rgba(242, 233, 164, 0.6)",
+      weight: 0.8,
+      className: "state-polygon-feature"
+    }),
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 1.8, color: "#ffffff", opacity: 0.95 }));
-      layer.on("mouseout", () => {
-        layer.setStyle({ weight: 0.9, color: "#F2E9A4", opacity: 0.6 });
-      });
+      layer.on("mouseover", () => layer.setStyle({
+        weight: 1.5, color: "#ffffff", fillColor: "rgba(255,255,255,0.08)", fillOpacity: 0.15
+      }));
+      layer.on("mouseout", () => layer.setStyle({
+        weight: 0.8, color: "rgba(242, 233, 164, 0.6)", fillColor: "transparent", fillOpacity: 0.0
+      }));
 
       const d = getStateData(feature);
       const name = feature.properties.NAME_1 || "–";
@@ -574,30 +576,18 @@ function buildChoropleth() {
     }
   }).addTo(map);
 
-  // 2. PREMIUM INDIA OUTLINE & GLOW LAYERS
-  const outerGlowLayer = L.geoJSON(indiaGeoData, {
+  // PREMIUM INDIA OUTLINE — soft cyan glow around national boundary
+  const outlineLayer = L.geoJSON(indiaGeoData, {
     style: {
-      color: "#59F5FF",
-      weight: 12,
-      opacity: 0.4,
       fillOpacity: 0,
-      className: "india-outer-glow"
-    },
-    interactive: false
-  }).addTo(map);
-  window._glowLayers.push(outerGlowLayer);
-
-  const innerOutlineLayer = L.geoJSON(indiaGeoData, {
-    style: {
       color: "#B9FFFF",
       weight: 1.2,
-      opacity: 0.9,
-      fillOpacity: 0,
-      className: "india-inner-outline"
+      opacity: 0.85,
+      className: "india-premium-outline"
     },
     interactive: false
   }).addTo(map);
-  window._glowLayers.push(innerOutlineLayer);
+  window._glowLayers.push(outlineLayer);
 }
 
 // ═══════════════════════════════════════════════════════════════
