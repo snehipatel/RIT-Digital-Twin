@@ -273,7 +273,7 @@ function simulateRainfall(lat, lon) {
 const COLOR_SCALES = {
   max_temp: {
     min: 20, max: 47,
-    stops: ["#123DFF", "#2A7FFF", "#3FD9FF", "#39D98A", "#8EEA3A", "#FFD84D", "#FF9F1C", "#FF5A36", "#D62828"],
+    stops: ["#4DAEE8", "#67CFE8", "#6FE4D8", "#8FE37A", "#B7E57A", "#D7D98A", "#DDB47A", "#D68B73", "#C96F63"],
     label: "Max Temp (°C)",
     unit: "°C",
     midLabel: "33.5°C"
