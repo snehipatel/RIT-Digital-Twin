@@ -544,16 +544,11 @@ function buildChoropleth() {
   choroplethLayer = L.geoJSON(indiaGeoData, {
     style: feature => {
       const d = getStateData(feature);
-      const rawName = feature.properties.STNAME_SH || feature.properties.STNAME || feature.properties.NAME_1 || feature.properties.ST_NM || "";
-      let name = rawName.trim();
-      if (name === "Odisha") name = "Orissa";
-      if (name === "Delhi") name = "NCT of Delhi";
-      if (name === "Ladakh") name = "Jammu & Kashmir";
-
-      const refColor = STATE_REFERENCE_COLORS[name] || scaleColor(getLayerValue(d), scale);
+      const val = getLayerValue(d);
+      const colorHex = scaleColor(val, scale);
 
       return {
-        fillColor: refColor,
+        fillColor: colorHex,
         fillOpacity: 0.92,
         color: "rgba(2, 25, 45, 0.95)",
         weight: 1.4,
