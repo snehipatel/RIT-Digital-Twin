@@ -383,7 +383,7 @@ function drawHeatmap() {
   hmCtx.save();
   drawGeoJsonPath(hmCtx);
   hmCtx.strokeStyle = "rgba(15, 23, 42, 0.95)";
-  hmCtx.lineWidth = 1.2;
+  hmCtx.lineWidth = 0.5;
   hmCtx.stroke();
   hmCtx.restore();
 }
@@ -520,15 +520,15 @@ function buildChoropleth() {
         fillColor: colorHex,
         fillOpacity: 0.05,
         color: "rgba(15, 23, 42, 0.95)",
-        weight: 1.0,
+        weight: 0.5,
         opacity: 1.0,
         className: "state-polygon-feature"
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.on("mouseover", () => layer.setStyle({ weight: 2.0, color: "#ffffff", fillOpacity: 0.35 }));
+      layer.on("mouseover", () => layer.setStyle({ weight: 1.2, color: "#ffffff", fillOpacity: 0.35 }));
       layer.on("mouseout", () => {
-        layer.setStyle({ weight: 1.0, color: "rgba(15, 23, 42, 0.95)", fillOpacity: 0.05 });
+        layer.setStyle({ weight: 0.5, color: "rgba(15, 23, 42, 0.95)", fillOpacity: 0.05 });
       });
 
       const d = getStateData(feature);
