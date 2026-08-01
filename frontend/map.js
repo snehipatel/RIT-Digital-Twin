@@ -297,12 +297,25 @@ function initHeatmapCanvas() {
   hmCtx = hmCanvas.getContext("2d");
 
   const resize = () => {
-    hmCanvas.width = mapCtr.offsetWidth;
-    hmCanvas.height = mapCtr.offsetHeight;
+    if (!mapCtr) return;
+    const w = mapCtr.offsetWidth || mapCtr.clientWidth;
+    const h = mapCtr.offsetHeight || mapCtr.clientHeight;
+    if (w > 0 && h > 0) {
+      hmCanvas.width = w;
+      hmCanvas.height = h;
+    }
     drawHeatmap();
   };
   window._resizeHeatmapCanvas = resize;
   resize();
+
+  if (window.ResizeObserver && mapCtr) {
+    const ro = new ResizeObserver(() => {
+      resize();
+    });
+    ro.observe(mapCtr);
+  }
+
   window.addEventListener("resize", resize);
   map.on("resize", resize);
 
@@ -317,10 +330,20 @@ function initHeatmapCanvas() {
 }
 
 function drawHeatmap() {
-  if (!hmCtx || !hmCanvas || !map || !indiaGeoData) return;
+  if (!hmCtx || !hmCanvas || !map || !indiaGeoData || !mapCtr) return;
+
+  const w = mapCtr.offsetWidth || mapCtr.clientWidth;
+  const h = mapCtr.offsetHeight || mapCtr.clientHeight;
+  if (w <= 0 || h <= 0) return;
+
+  if (hmCanvas.width !== w || hmCanvas.height !== h) {
+    hmCanvas.width = w;
+    hmCanvas.height = h;
+  }
 
   const width = hmCanvas.width;
   const height = hmCanvas.height;
+  if (width <= 0 || height <= 0) return;
   hmCtx.clearRect(0, 0, width, height);
 
   const bounds = map.getBounds();
