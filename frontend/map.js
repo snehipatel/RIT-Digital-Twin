@@ -367,6 +367,14 @@ function drawHeatmap() {
   hmCtx.drawImage(offscreenCanvas, 0, 0, width, height);
   hmCtx.filter = "none";
   hmCtx.restore();
+
+  // Stroke crisp state boundary lines directly on top of gradient canvas
+  hmCtx.save();
+  drawGeoJsonPath(hmCtx);
+  hmCtx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+  hmCtx.lineWidth = 1.2;
+  hmCtx.stroke();
+  hmCtx.restore();
 }
 
 // ═══════════════════════════════════════════════════════════════
